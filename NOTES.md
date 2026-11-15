@@ -5,14 +5,44 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
 
 ## State (update after every step)
 
-- Phase: 5 (critic loop). Iteration 03 capture running.
-- iter-02: critic highest severity major (13 items: flight clipping in the arcade, floor mirror ghosts, black
-  columns under the canopies, stair-stepped shadows, sun glint orbs, tiled city, plain roof...). All addressed in
-  commit "Iteration 02: ...".
-- Perf (iter-02, RTX 3070, 2560x1440, 60 s flight, GPU possibly shared): GPU avg 4.41, p99 10.60, max 13.67 ms
-- Last good capture: verify/iter-02 (0 console errors)
-- Next step: critic on iter-03, fix, iter-04. Stop at highest severity minor or after 6 critic iterations.
-- Not done yet: screenshots, index.html captures at High and Low, final README numbers
+- Phase: 7 (delivered). Critic loop stopped by the brief's rule: 6 critic iterations (iter-02 .. iter-07), highest
+  severity still "major" in every one. Gate 1 is NOT passed; gate 2 (perf) passes.
+- Final capture: verify/iter-07 (dev.html, 2560x1440, 0 console errors). index.html captured at High
+  (verify/final-index-high) and Low (verify/final-index-low, --storage nabawi=2): 0 console errors on both.
+- Perf (iter-07 benchmark, dev.html, RTX 3070, 2560x1440, scripted 60 s flight with the umbrellas opening and the
+  shadow map redrawn while they move): GPU avg 5.21 ms, p99 9.27 ms, max 9.36 ms; frame 16.67 ms (vsync-locked
+  headless). Two other worlds were rendering on the same GPU during some runs, so timings are noisy (iter-02..07
+  GPU avg ranged 4.4-5.3 ms).
+- index.html: 93.2 kB, 38.1 kB gzipped. Load to menu ~0.9-1.4 s headless.
+- Not done: critic majors that recurred (see below); a real-window frame-pacing and heap check; audio was changed
+  (pigeons, wing claps) but not listened to; touch controls untested.
+- Next step if resumed: decide with Moey whether to ship as is or keep iterating; best leads are in "Open critic
+  items".
+
+## Critic history
+
+| Iter | Highest | Main changes after it |
+|---|---|---|
+| 02 | major | flight path out of the arcade piers, soft floor mirror, wider PCF, warmer ambient, merlons, roof detail, city variety, bigger Green Dome |
+| 03 | major | exposure down, golden key, bluer sky, flatter canopies, warmer marble, lit screens, larger lanterns, recomposed poses |
+| 04 | major | leaf merlons, round balconies, canopy hub ring, neutral bounce, richer inlay, no painted arches behind the facade, brass lamps, silver domes |
+| 05 | major | tighter canopy gaps, per-umbrella sag, pleated buds, seams fade with distance, sand-filled stars, lighter arcade ceiling |
+| 06 | major | canopies glow onto the plaza, brighter fabric, rotated PCF taps (dithered penumbrae), bolder inlay, rooftop tanks, sparser far city |
+| 07 | major | (stopped: 6 critic iterations) |
+
+Treated as noise (checked on contrast-stretched crops, not present): "concentric sky banding" in pose-2, raised in
+iter-03..07. A faint bloom halo round the sunlit minaret was real and was reduced in iter-06.
+
+## Open critic items (iter-07, most recurring first)
+
+- Floor reads flat lilac-grey rather than warm polished white marble (every iteration). Lighting it more warmly
+  helped each time but never closed it; the next step is a real (blurred) reflection of the canopy undersides, or
+  a warmer, brighter floor albedo with a stronger sheen.
+- Aerial city reads as repeated boxes; the canopy field from above reads as a quilt.
+- Pose-1 composition: under open canopies the Green Dome is hidden (true to the place: from inside the umbrella
+  field the roof and dome are not visible). The index.html pose-1 shot, taken before the umbrellas open, shows it.
+- Minaret parts seen through the 0.4 m gaps between canopies read to the critic as clipping.
+- Closed umbrella buds read as tall white blades.
 
 ## What changed from Madinah Horizon
 
@@ -32,7 +62,7 @@ Axes: +x east, -z north, y up, metres. Floor y = 0.
 
 | Feature | Real | Here |
 |---|---|---|
-| Piazza umbrellas | 250 (182 + 68 in the east square), 25.5 x 25.5 m open, about 14-15 m open height to the canopy, about 21 m closed; by SL Rasch, 2010 | 105 on a 27 m grid on the east plaza (three left out in front of the main gate), 25.5 m canopies, hub 13.75 m, corners ~17.8 m open, bud ~21.5 m closed; open as a wave from the main gate |
+| Piazza umbrellas | 250 (182 + 68 in the east square), 25.5 x 25.5 m open, about 14-15 m open height to the canopy, about 21 m closed; by SL Rasch, 2010 | 105 on a 27 m grid on the east plaza (three left out in front of the main gate), 26.6 m canopies (0.4 m gaps), hub 13.75 m, corners ~16 m open, bud ~21.5 m closed; open as a wave from the main gate, 20 s each |
 | Minarets | 10, about 104-105 m | 8 Saudi-era ones at ~100 m (4 on the east side, 4 framing the roof), plus an older-style minaret of ~64 m beside the Green Dome |
 | Roof domes | 27 sliding domes, silver-grey, on square bases | 27 silver domes on square bases over the hall |
 | Green Dome | south-east corner of the old mosque, over the Prophet's chamber | rises above the roof 26 m inside the east facade near its south end; nothing below the roof is modelled |

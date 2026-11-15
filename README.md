@@ -6,12 +6,12 @@ the great umbrellas open.**
 White marble underfoot with grey and sand-coloured inlay, rows of tall white columns whose umbrellas unfold one
 after another, the mosque's pale facade with its pointed arches and closed brass gates, minarets about 100 m
 tall, silver domes on the roof and the Green Dome rising above it. Everything is made by code: no images, no 3D
-models, no sound files. The whole world is **one HTML file** of about 95 KB.
+models, no sound files. The whole world is **one HTML file** of about 93 KB (38 KB gzipped).
 
 The buildings are respectful approximations, not replicas, and the distances are composed so everything fits in
 a walk. There are no people in the scene, nothing inside the mosque is shown, and nothing is recited.
 
-![The plaza as the umbrellas open, the facade and minarets beyond](.github/screenshots/umbrellas-opening.jpg)
+![The plaza at sunrise before the umbrellas open: the facade, minarets and the Green Dome](.github/screenshots/plaza-at-sunrise.jpg)
 
 | | |
 |---|---|
