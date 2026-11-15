@@ -285,13 +285,16 @@ if (hasTS) {
 // ---------------------------------------------------------------- the umbrella clock
 // F[UMC] runs up while the umbrellas open (each one moves from its delay to delay + UDUR), down 3x as fast when
 // U closes them; F[UMW] waits before they open again. The shadow map is redrawn every other frame while it moves.
-const UDUR = 20, UMAX = 60;
-let shadowDirty = 2, shadowTick = 0;
-F[UMC] = -4; F[UMD] = 0;
+// the menu's Umbrellas choice: 0 open a few seconds after entering (the wave takes ~20 s), 1 already open, 2 closed
+const UDUR = 20, UMAX = 60, USPD = 3;
+let shadowDirty = 2, shadowTick = 0, umbMode = 0;
+try { umbMode = +(localStorage.nabawiUmb || 0) || 0; } catch {}
+const umbSet = (m) => { umbMode = m; keep('nabawiUmb', m); F[UMD] = 0; F[UMC] = m === 1 ? UMAX : m === 2 ? -2 : -9; shadowDirty = 2; };
+umbSet(umbMode);
 const umbStep = (dt) => {
   if (F[UMD] === 0) return;
   if (F[UMD] < 0 && F[UMC] <= -2) { F[UMC] = -2; F[UMW] -= dt; if (F[UMW] < 0) F[UMD] = 1; return; }
-  F[UMC] += F[UMD] * dt; if (F[UMC] > UMAX) { F[UMC] = UMAX; F[UMD] = 0; }
+  F[UMC] += F[UMD] * dt * (F[UMD] > 0 ? USPD : 1); if (F[UMC] > UMAX) { F[UMC] = UMAX; F[UMD] = 0; }
   shadowDirty = 2;
 };
 const umbReplay = () => { F[UMD] = F[UMC] > 0 ? -3 : 1; F[UMW] = 2.5; };
@@ -457,6 +460,7 @@ function frame(now) {
     F[YAW] = yaw; F[PIT] = pitch; F[VX] = vx; F[VY] = vy; F[VZ] = vz;
     const n = floor(hypot(x - F[CX], y - F[CY], z - F[CZ]) / .3) + 1, mx = (x - F[CX]) / n, my = (y - F[CY]) / n, mz = (z - F[CZ]) / n;
     for (let i = 0; i < n; i++) { F[CX] += mx; F[CY] += my; F[CZ] += mz; collide(); }
+    if (fly && kd && grounded) { fly = false; F[VY] = 0; }
   }
   render();
   if (hud) {
@@ -471,7 +475,8 @@ const pose = (i) => { const p = POSES[i]; fly = !!p[6]; F[VX] = F[VY] = F[VZ] = 
 const key = (e, v) => {
   switch (e.code) {
     case 'KeyW': kf = v; break; case 'KeyS': kb = v; break; case 'KeyA': kl = v; break; case 'KeyD': kr = v; break;
-    case 'KeyE': ku = v; break; case 'KeyQ': kd = v; break; case 'ShiftLeft': case 'ShiftRight': ks = v; break;
+    // E lifts off from walking; Q descends, and touching the ground while descending lands back to walking
+    case 'KeyE': ku = v; if (v && !fly) { fly = true; F[VY] = 0; } break; case 'KeyQ': kd = v; break; case 'ShiftLeft': case 'ShiftRight': ks = v; break;
     default: if (v && !e.repeat) {
       if (e.code === 'KeyH') { hud = !hud; hTot = 0; hPer = 1e9; info.textContent = ''; }
       else if (e.code === 'KeyM') mute();
@@ -512,10 +517,11 @@ const ui = (m) => {
 };
 const go = () => {
   sound(); ui(false); bDive.textContent = 'Resume';
-  if (F[UMD] === 0 && F[UMC] < 0) F[UMD] = 1;
+  if (umbMode === 0 && F[UMD] === 0 && F[UMC] < 0) F[UMD] = 1;
   if (mob) document.documentElement.requestFullscreen?.()?.then(() => screen.orientation.lock('landscape')).catch(() => 0);
   if (!mob) capture();
 };
+{ const bs = $('umb').querySelectorAll('button'), lit = () => bs.forEach((b, i) => { b.className = i === umbMode ? 'on' : ''; }); bs.forEach((b, i) => { b.onclick = () => { umbSet(i); lit(); }; }); lit(); }
 bDive.onclick = go; $('o').onclick = () => ui(true); $('fl').onclick = () => { fly = !fly; F[VY] = 0; };
 $('q').querySelectorAll('button').forEach((b, i) => { if (i === 2 - LV) b.className = 'on'; else b.onclick = () => { keep('nabawi', 2 - i); location.reload(); }; });
 document.addEventListener('pointerlockchange', () => ui(!document.pointerLockElement));

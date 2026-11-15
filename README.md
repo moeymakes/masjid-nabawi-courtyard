@@ -25,7 +25,7 @@ a walk. There are no people in the scene, nothing inside the mosque is shown, an
 1. Download [`index.html`](index.html).
 2. Open it in **Chrome** or **Edge** on a desktop computer.
 3. Wait a few seconds while the plaza is built, then press **Enter** and start walking. The umbrellas begin to
-   open a few seconds later, spreading out from the main gate.
+   open about three seconds later, spreading out from the main gate (or pick **Open** in the menu).
 
 It works offline. It needs a browser with **WebGPU**.
 
@@ -51,8 +51,10 @@ It works offline. It needs a browser with **WebGPU**.
 | Look around | Move the mouse (or drag with the left button where the mouse cannot be captured) |
 | Walk | `W` `A` `S` `D` |
 | Run | Hold `Shift` |
-| Fly / walk | `F` (when flying, `Q` / `E` go down / up) |
+| Fly / walk | `F`, or `E` to lift off from walking |
+| Up / down | `E` / `Q` (descending onto the ground lands you back to walking) |
 | Close and reopen the umbrellas | `U` |
+| Umbrellas at the start | **Opening** (they open a few seconds after you enter, about 20 s for the whole wave), **Open** or **Closed** in the menu |
 | Jump to a viewpoint | `1` to `6` |
 | Menu | `Esc` |
 | Sound on / off | `M` |
