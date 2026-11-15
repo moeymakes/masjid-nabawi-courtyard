@@ -1,0 +1,55 @@
+Build a real-time, realistic-but-painterly scene of the marble plaza and courtyards of Masjid an-Nabawi in
+Madinah, seen up close at human scale, just after sunrise. It only needs to look beautiful and let me walk
+(and, with a key, fly) through it.
+
+PRIORITIES (in this order when they conflict)
+1. Visual quality
+2. Stable frame pacing at the target spec
+3. Small bundle size
+
+CONSTRAINTS
+- No Three.js/Babylon.js or other engines.
+- WebGPU rendered.
+- Everything procedural: no texture/model/audio files. Deliverable is a single self-contained index.html.
+  Report minified size.
+- Zero per-frame JS allocations (no GC stutter). Preallocate all buffers.
+- Sacred site: no human figures at all and no depiction of any person. No interiors: nothing inside the
+  mosque, never the Prophet's chamber or any grave; doors and screens stay closed or dark. No synthesized
+  adhan, no Qur'an recitation, no scripture text rendered in the world. Buildings are respectful
+  approximations, not replicas; distances are composed and compressed. Finials are stacked spheres with an
+  upturned crescent, checked in silhouette.
+
+TARGET
+- Omarchy Linux, Chrome 157, RTX 3070, 60 Hz+ monitor
+- 2560x1440 at full resolution. GPU frame time <= 11 ms average, p99 <= 16 ms during a scripted 60 s
+  fly-through.
+
+SCENE
+- The great white umbrellas on tall columns over the plaza: they stand closed when you arrive and open
+  slowly, one after another, as the set piece; their membranes glow when the low sun is behind them
+- Floors of white marble with inlaid grey and sand-coloured geometric bands and stars, cool and polished
+- The mosque's east facade: pale stone, blind arcades of pointed arches, gates (portals) with closed
+  brass doors, lamps by the gates still glowing softly
+- Minarets of about 100 m close enough to feel their height (square base, octagonal stages, balconies,
+  crescent finials); silver sliding domes on the roof; the Green Dome rising above the south-east of the old
+  mosque beside an older minaret
+- A free-standing arcade of pointed arches along the plaza's east edge, sun striping through it; date palms
+  and planted beds behind it; tall lamp posts across the plaza
+- Light: sun 9 degrees up in the east, long shadows of columns across the marble, warm on the facade, blue
+  and rose sky over the mosque, thin high cloud
+- Life: pigeons circling and walking on the marble, dust motes in the low sun
+- World: bounded, the city and hills fading into morning haze beyond
+
+CONTROLS
+WASD walk, mouse look (pointer lock), Shift to run, F toggles flight (then Q/E down/up), U replays the umbrellas
+
+VERIFICATION
+- Visual critic: a separate subagent that sees ONLY your renders, never your code or reasoning. Give it 6
+  fixed camera poses, rendered at 2560x1440 in GPU-accelerated Chrome, plus frames sampled from the scripted
+  fly-through to catch shimmer, aliasing, popping and banding. It returns prioritized, concrete defects.
+  Iterate until it reports nothing above "minor" (or 6 critic iterations).
+- Performance: GPU timestamp queries plus a frame-time log from the scripted fly-through. Report average,
+  99th percentile and max.
+
+DONE WHEN: both verification gates pass. Deliver index.html, the bundle size, the perf report and the
+critic's final review.

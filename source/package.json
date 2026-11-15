@@ -1,0 +1,16 @@
+{
+  "name": "madinah-horizon",
+  "private": true,
+  "description": "A walkable procedural world around Madinah, rendered with WebGPU, bundled into one HTML file",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:readable": "node build.mjs --readable",
+    "build:dev": "node build.mjs --dev",
+    "capture": "node tools/capture.mjs ../dev.html --out ../verify/latest --size 2560x1440"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "playwright-core": "1.49.1"
+  }
+}
