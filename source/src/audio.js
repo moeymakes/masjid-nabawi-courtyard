@@ -1,9 +1,9 @@
 // ============================================================================
-// audio: procedural ambience of an evening garden (no sample files, nothing recited)
+// audio: procedural ambience of an early morning plaza (no sample files, nothing recited)
 // ============================================================================
 // A fixed Web Audio graph built on the first click / key / touch and driven by a 10 Hz timer, not the frame loop
-// (pattern from Abyssal Garden, MIT). Layers: wind bed with slow gusts, palm-frond rustle riding the gusts,
-// air rush that follows the camera's speed, a soft drone, dove coos and small-bird chirps.
+// (pattern from Abyssal Garden, MIT). Layers: wind bed with slow gusts, palm-frond rustle near the palm bed,
+// air rush that follows the camera's speed, a very soft drone, pigeon coos, wing claps and sparrow chirps.
 let AC, OUT, muted = false;
 const VOL = 0.7;
 function mkSound(ac) {
@@ -29,9 +29,11 @@ function mkSound(ac) {
   const rush = G(0, out), rushF = BQ('bandpass', 300, 0.8, rush); src(nb, .7, rushF);
   // drone: a quiet open fifth that slowly beats
   const pad = G(1, out, G(1.2, wet));
-  [110, 164.81, 220, 329.63].forEach((f, i) => { const g = G(0.012 - i * 0.002, pad); N(OscillatorNode, { frequency: f }, g); N(OscillatorNode, { frequency: f + rr(0.04, 0.12) }, g); });
+  [110, 164.81, 220, 329.63].forEach((f, i) => { const g = G(0.007 - i * 0.0012, pad); N(OscillatorNode, { frequency: f }, g); N(OscillatorNode, { frequency: f + rr(0.04, 0.12) }, g); });
   const pool = (n, send, type) => Array.from({ length: n }, () => { const p = N(StereoPannerNode, {}, out, G(send, wet)), g = G(0, p); return { p, g, o: N(OscillatorNode, { type }, g) }; });
   const chirp = pool(4, .25), dove = pool(3, .5);
+  const clapP = N(StereoPannerNode, {}, out, G(.3, wet)), clapG = G(0, clapP); src(nw, 1.3, BQ('bandpass', 1700, .9, clapG));
+  const clap = (t, pan) => { clapP.pan.setValueAtTime(pan, t); clapG.gain.setValueAtTime(0, t); clapG.gain.linearRampToValueAtTime(.09, t + .004); clapG.gain.setTargetAtTime(0, t + .004, .018); };
   const play = (vs, t, f0, f1, dur, vol, att, pan) => {
     const v = vs.shift(), f = v.o.frequency, g = v.g.gain; vs.push(v);
     v.p.pan.setValueAtTime(pan, t);
@@ -46,17 +48,18 @@ function mkSound(ac) {
     let v = hypot(F[CX] - lx, F[CY] - ly, F[CZ] - lz) / dt; if (v > 80) v = 0;
     lt = now; lx = F[CX]; ly = F[CY]; lz = F[CZ];
     rush.gain.setTargetAtTime(0.35 * pow(min(v / 40, 1), 1.2), t, 0.3); rushF.frequency.setTargetAtTime(240 + v * 12, t, 0.3);
-    const inGrove = max(abs(F[CX]), abs(F[CZ])) < 250 && F[CY] < 40;
-    rus.gain.setTargetAtTime(inGrove ? .09 : .02, t, 1.5);
+    const inGrove = F[CX] > 70 && F[CY] < 30;
+    rus.gain.setTargetAtTime(inGrove ? .08 : .015, t, 1.5);
     if (t > tB) { // a small bird: a burst of quick high chirps
       let tt = t; const pan = rr(-.8, .8), f = rr(2600, 4200);
       for (let n = 2 + rnd() * 5 | 0; n--;) { play(chirp, tt, f * rr(.9, 1.1), f * rr(1.2, 1.5), .07, rr(.015, .03) * (inGrove ? 1 : .3), .005, pan); tt += rr(.08, .16); }
       tB = tt + rr(1.5, 7);
     }
-    if (t > tD) { // a dove: coo, long rising-falling COO, coo
-      let tt = t; const pan = rr(-.7, .7), f = rr(300, 360);
-      for (const [a, b, d] of [[1, .96, .25], [.92, 1.08, .55], [1.02, .9, .3]]) { play(dove, tt, f * a, f * b, d, .03, d * .3, pan); tt += d + .12; }
-      tD = tt + rr(6, 16);
+    if (t > tD) { // a pigeon: a soft rolling coo-roo-coo, now and then a burst of wing claps
+      let tt = t; const pan = rr(-.7, .7), f = rr(250, 300);
+      for (const [a, b, d] of [[1, .94, .18], [.9, 1.06, .42], [1.04, .86, .26]]) { play(dove, tt, f * a, f * b, d, .028, d * .3, pan); tt += d + .06; }
+      if (rnd() < .35) { const c = rr(-.8, .8); for (let n = 3 + (rnd() * 4 | 0); n--;) { clap(tt, c); tt += rr(.07, .1); } }
+      tD = tt + rr(3, 10);
     }
   };
 }

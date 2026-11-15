@@ -6,7 +6,7 @@
 //   B    the same flight as a benchmark: the resolution stays fixed, every frame is timed, the result is shown at the end
 //   P, B or 1-6 during a flight stop it
 //   #capture in the URL holds full resolution (dynamic resolution off) for the critic's stills, and sets the
-//   umbrellas per viewpoint: half-way through opening at 1, open at 2-6. P and B start them closed and open them.
+//   umbrellas per viewpoint: half-way through opening at 1, the last ones still opening at 6, open at 2-5. P and B start them closed and open them.
 {
   const LOGN = 1 << 16, logFrame = new Float32Array(LOGN), logGpu = new Float32Array(LOGN);
   let flying = false, bench = false, last = 0, nFrame = 0, nGpu = 0;
@@ -40,7 +40,7 @@
       }
     } else if (/Digit[1-6]/.test(e.code)) {
       stop();
-      if (location.hash === '#capture') { F[UMC] = e.code === 'Digit1' ? 24 : UMAX; F[UMD] = 0; shadowDirty = 2; }
+      if (location.hash === '#capture') { F[UMC] = e.code === 'Digit1' ? 24 : e.code === 'Digit6' ? 27 : UMAX; F[UMD] = 0; shadowDirty = 2; }
     }
   });
 }

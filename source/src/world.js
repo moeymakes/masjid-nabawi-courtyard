@@ -38,17 +38,21 @@ const FLY = new Float32Array([
   -31.5, 4, 114, 40, 5, 140,
   -4.5, 4, 122, 96, 4, 140,
   76.5, 3.5, 124.5, 96, 3, 123.5,
-  88, 3, 123.5, 100, 3, 110,
+  84, 3, 123.5, 100, 3, 120,
+  92.5, 3, 123.5, 100, 3, 110,
+  96, 3, 115, 96, 3, 0,
   96, 3, 100, 96, 3, 0,
   96, 3, -40, 130, 5, -60,
-  88, 4, -51.5, 60, 6, -70,
+  96, 3, -47, 60, 4, -55,
+  92.5, 3.2, -51.5, 60, 5, -60,
+  86, 4, -53, 60, 6, -70,
   82, 8, -90, -90, 30, -60,
   84, 30, -140, -120, 20, 60,
   40, 60, -165, -120, 20, 60,
   150, 115, -175, -120, 18, 80,
 ]);
 const FLYR = 360, FLYH = 150;
-const LANT = [];
+const LANT = [], GATEDOME = [];
 
 // ---------------------------------------------------------------- far landscape: polar grid out to 12 km
 const FN = 1024, FC = 24000 / (FN - 1), FO = -12000;
@@ -154,13 +158,15 @@ function merlons(m, x0, z0, x1, z1, y, sp = 1.5) {
   const L = hypot(x1 - x0, z1 - z0), ux = (x1 - x0) / L, uz = (z1 - z0) / L;
   for (let t = sp / 2; t < L; t += sp) {
     const cx = x0 + ux * t, cz = z0 + uz * t, a = abs(ux) > .5;
-    const w = .42, d = .22, w2 = .24;
-    if (a) { box(m, cx - w, y, cz - d, cx + w, y + .8, cz + d); box(m, cx - w2, y + .8, cz - d, cx + w2, y + 1.3, cz + d); }
-    else { box(m, cx - d, y, cz - w, cx + d, y + .8, cz + w); box(m, cx - d, y + .8, cz - w2, cx + d, y + 1.3, cz + w2); }
+    const d = .2;
+    for (const [w, h0, h1] of [[.4, 0, .5], [.27, .5, .82], [.15, .82, 1.1]]) {
+      if (a) box(m, cx - w, y + h0, cz - d, cx + w, y + h1, cz + d); else box(m, cx - d, y + h0, cz - w, cx + d, y + h1, cz + w);
+    }
+    lathe(m, [[.2, 1.1], [0, 1.38]], 4, cx, y, cz, PI / 4);
   }
 }
 // Saudi-era minaret: square shaft to above the roof, three octagonal stages on corbelled balconies, a lantern, a cap
-const MINARET_N = [[3.3, 22], [3.3, 48.4], [4.5, 50.4], [4.5, 52.2], [3, 52.5], [3, 66.6], [4.1, 68.4], [4.1, 70.2], [2.5, 70.5], [2.5, 78.8], [3.5, 80.4], [3.5, 81.9], [2.1, 82.2], [2.1, 86], [2.4, 86.2], [2.25, 87.8], [1.3, 89.8], [.3, 91.3], [0, 91.5]];
+const MINARET_N = [[3.3, 22], [3.3, 34.6], [3.55, 34.8], [3.55, 35.5], [3.3, 35.7], [3.3, 48.4], [4.5, 50.4], [4.5, 52.2], [3, 52.5], [3, 59.2], [3.22, 59.4], [3.22, 60], [3, 60.2], [3, 66.6], [4.1, 68.4], [4.1, 70.2], [2.5, 70.5], [2.5, 74.4], [2.7, 74.6], [2.7, 75.1], [2.5, 75.3], [2.5, 78.8], [3.5, 80.4], [3.5, 81.9], [2.1, 82.2], [2.1, 86], [2.4, 86.2], [2.25, 87.8], [1.3, 89.8], [.3, 91.3], [0, 91.5]];
 const MINARET_O = [[2.6, 19], [2.6, 39.6], [3.4, 41.4], [3.4, 42.6], [2.2, 42.9], [2.2, 51.6], [2.9, 53], [2.9, 54], [1.8, 54.3], [1.8, 58], [2.1, 59], [2.15, 60.4], [1.7, 62.2], [.9, 63.6], [.15, 64.4], [0, 64.5]];
 const MK = 1.09;
 function meshMinaret(prof, base, baseH, k = 1) {
@@ -212,8 +218,9 @@ function meshBird() {
   return m;
 }
 // city block sizes (w, h, d, setback storey); the last three are the taller hotels
-const CITY = [[27, 6.6, 28, 0], [28, 9.9, 26, 0], [24, 9.9, 27, 1], [28, 13.2, 28, 0], [26, 6.6, 27, 1], [20, 9.9, 28, 0], [28, 19.8, 28, 1], [29, 26.4, 29, 0], [26, 33, 26, 1], [22, 6.6, 24, 1]];
-const CITY_LOW = [0, 1, 2, 3, 4, 5, 9];
+const CITY = [[27, 6.6, 28, 0], [28, 9.9, 26, 0], [24, 9.9, 27, 1], [28, 13.2, 28, 0], [26, 6.6, 27, 1], [20, 9.9, 28, 0], [28, 19.8, 28, 1], [29, 26.4, 29, 0], [26, 33, 26, 1], [22, 6.6, 24, 1],
+  [18, 16.5, 22, 1], [30, 13.2, 18, 0], [16, 23.1, 16, 0], [24, 4.4, 30, 0], [34, 9.9, 20, 1], [20, 39.6, 22, 1], [22, 49.5, 24, 1], [14, 8.8, 26, 0]];
+const CITY_LOW = [0, 1, 2, 3, 4, 5, 9, 10, 11, 13, 14, 17, 3, 1];
 
 // ---------------------------------------------------------------- materials (W_SOLID fs)
 // 1 far ground · 7 stone (box facades) · 8 Green Dome · 9 silver dome · 10 gold · 11 grey-white old domes ·
@@ -286,7 +293,7 @@ function makeWorld(FAR, flyPts) {
       lathe(bronze, [[.19, 0], [.24, .1], [.05, .4]], 8, X + .55, 5.9, lz);
       LANT.push(X + .55, 5.6, lz);
     }
-    if (main) { const dm = new Mesh(); lathe(dm, domeProf(3.2, 1.2, 1.1), 20, FAC + 1.4, h + .5, z); solid(add(dm), 0, 0, 0, 1, Q0, 9, 0); }
+    if (main) { const dm = new Mesh(); lathe(dm, domeProf(3.2, 1.2, 1.1), 24, FAC + 1.4, h + .5, z); solid(add(dm), 0, 0, 0, 1, Q0, 11, 0); GATEDOME.push(FAC + 1.4, h + .5 + 5, z); }
   }
   // roof parapet all round, then the roof furniture
   merlons(carved, FAC - .25, MZ0, FAC - .25, MZ1, ROOF);
@@ -308,6 +315,14 @@ function makeWorld(FAR, flyPts) {
     box(sdBase, x - 9.8, ROOF + 1.6, z - 9.8, x + 9.8, ROOF + 2.1, z + 9.8);
     lathe(sdDome, domeProf(8.2, .7, .78), 28, x, ROOF + 2.1, z);
   }
+  rseed(21);
+  for (let x = MX0 + 18; x < FAC - 10; x += 36) box(sdBase, x - .25, ROOF, MZ0 + 2, x + .25, ROOF + .6, MZ1 - 2);
+  for (let z = MZ0 + 18; z < MZ1 - 10; z += 36) box(sdBase, MX0 + 2, ROOF, z - .25, FAC - 3, ROOF + .6, z + .25);
+  for (let k = 0; k < 70; k++) {
+    const x = rr(MX0 + 6, FAC - 8), z = rr(MZ0 + 6, MZ1 - 6), w = rr(1.5, 4), d = rr(1.5, 3), h = rr(.8, 2.2);
+    if (hypot(x - GREEN[0], z - GREEN[1]) < 22 || (x > -200 && z > 90)) continue;
+    box(sdBase, x - w, ROOF, z - d, x + w, ROOF + h, z + d, .8);
+  }
   solid(add(sdBase), 0, 0, 0, 1, Q0, 7, .3, 0, 0);
   solid(add(sdDome), 0, 0, 0, 1, Q0, 9, 0);
   // the Ottoman-era part: a field of small grey-white domes around the Green Dome
@@ -318,12 +333,13 @@ function makeWorld(FAR, flyPts) {
   }
   solid(add(smallD), 0, 0, 0, 1, Q0, 11, 0);
   // the Green Dome: square base, drum and ribbed dome, gold finial
-  const gb = new Mesh(); box(gb, -12.5, 0, -12.5, 12.5, 2.4, 12.5); box(gb, -12.9, 2.4, -12.9, 12.9, 3, 12.9);
+  const gb = new Mesh(); box(gb, -14.5, 0, -14.5, 14.5, 2.4, 14.5); box(gb, -14.9, 2.4, -14.9, 14.9, 3, 14.9);
   solid(add(gb), GREEN[0], ROOF, GREEN[1], 1, Q0, 25, 0);
-  const gd = new Mesh(); lathe(gd, [[10.6, 0], [10.6, 4.2], [10.2, 4.6], ...domeProf(9.6, 4.6, 1.18).map(([r, h]) => [r, h + 4.6])], 32);
+  const gd = new Mesh(); lathe(gd, [[12.2, 0], [12.2, 4.6], [11.8, 5], ...domeProf(11, 4.8, 1.18).map(([r, h]) => [r, h + 5])], 40);
   solid(add(gd), GREEN[0], ROOF + 3, GREEN[1], 1, Q0, 8, 0);
   const fin = add(meshFinial(1));
-  solid(fin, GREEN[0], ROOF + 3 + 4.6 + 4.6 + .35 + 9.6 * 1.18 - .5, GREEN[1], 2.1, Q0, 10, 0);
+  solid(fin, GREEN[0], ROOF + 3 + 5 + 4.8 + .35 + 11 * 1.18 - .5, GREEN[1], 2.3, Q0, 10, 0);
+  for (let i = 0; i < GATEDOME.length; i += 3) solid(fin, GATEDOME[i], GATEDOME[i + 1] - .2, GATEDOME[i + 2], .8, Q0, 10, 0);
   // minarets
   const mN = add(meshMinaret(MINARET_N, 9, 24, MK)), mO = add(meshMinaret(MINARET_O, 6, ROOF + 1, 1));
   for (const [x, z] of MINS) {
@@ -383,7 +399,7 @@ function makeWorld(FAR, flyPts) {
     cbox(min(x, x - nx) - .1, max(x, x - nx) + .1, -50, 7.4, ARCZ[1] - .75, ARCZ[1] + .75);
   }
   box(arc, ARCX[0] - .3, 7.4, ARCZ[0] - .3, ARCX[1] + .3, 8.1, ARCZ[1] + .3);
-  box(arc, ARCX[0] + .9, 7.25, ARCZ[0], ARCX[1] - .9, 7.4, ARCZ[1], .5);
+  box(arc, ARCX[0] + .9, 7.25, ARCZ[0], ARCX[1] - .9, 7.4, ARCZ[1], .85);
   cbox(ARCX[0] - .3, ARCX[1] + .3, 7.25, 9.6, ARCZ[0] - .3, ARCZ[1] + .3);
   merlons(arc, ARCX[0] - .1, ARCZ[0], ARCX[0] - .1, ARCZ[1], 8.1);
   merlons(arc, ARCX[1] + .1, ARCZ[0], ARCX[1] + .1, ARCZ[1], 8.1);
@@ -441,11 +457,11 @@ function makeWorld(FAR, flyPts) {
     for (let j = 0; j < 12; j++) for (let i = 0; i < 12; i++) {
       if (i % sx === 0 || j % sz === 0 || (i === lane && j > 6)) continue;
       const lx = i * 30 - 165 + rr(-3, 3), lz = j * 30 - 165 + rr(-3, 3), x = dx + lx * ca - lz * sa, z = dz + lx * sa + lz * ca, c = farB(x, z, 0);
-      if (c < .05 || rnd() > min(1, c * 3.2) || rnd() < .05) continue;
+      if (c < .05 || rnd() > min(1, c * 3.2) * (1 - .55 * sstep(1200, 3200, hypot(x, z))) || rnd() < .08) continue;
       if (x > -460 && x < 175 && abs(z) < 395) continue;
       const dm = hypot(x + 120, z * 1.1);
       let t = CITY_LOW[(rnd() * CITY_LOW.length) | 0];
-      if (dm < 700 && (x > 175 || z < -395) && rnd() < .55) t = rnd() < .5 ? 6 : rnd() < .85 ? 7 : 8;
+      if (dm < 750 && (x > 175 || z < -395) && rnd() < .6) t = [6, 7, 8, 12, 15, 16, 10][(rnd() * 7) | 0];
       const sc = rr(.82, 1.04), yaw = -ang + (rnd() < .5 ? 0 : PI / 2) + rr(-.025, .025);
       solid(cityIds[t], x, fh(x, z) - .5, z, sc, yawQ(yaw), 17, rnd(), 0, CITY[t][1] * sc);
     }

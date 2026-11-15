@@ -237,16 +237,16 @@ fn shadow1(p: vec3f) -> f32 {
 }
 fn shadow9(p: vec3f) -> f32 {
   if (LOW) { return shadow1(p); }
-  let s = shUV(p); let e = 1.3 / ${SHADOW}.; var a = 0.;
-  for (var x = -1; x <= 1; x++) { for (var y = -1; y <= 1; y++) { a += textureSampleCompareLevel(tSh, sS, s.xy + vec2f(f32(x), f32(y)) * e, s.z); } }
-  return mix(1., a / 9., shK(s));
+  let s = shUV(p); let e = 1.25 / ${SHADOW}.; var a = 0.;
+  for (var x = 0; x < 4; x++) { for (var y = 0; y < 4; y++) { a += textureSampleCompareLevel(tSh, sS, s.xy + (vec2f(f32(x), f32(y)) - 1.5) * e, s.z); } }
+  return mix(1., a / 16., shK(s));
 }
 // how much open sky a point sees: less under an open canopy, at the foot of a column, by the facade, in the arcade
 fn skyOcc(p: vec3f) -> f32 {
   let u = uCell(p.xz);
   let inside = (1. - ss(10.5, 13.5, max(abs(u.x), abs(u.y)))) * ss(16., 13.5, p.y);
-  var o = 1. - .6 * uOpen(g.mis.w, uDelay(u.zw)) * inside;
-  o *= mix(.6, 1., ss(.9, 2.8, length(u.xy) + p.y * .4));
+  var o = 1. - .3 * uOpen(g.mis.w, uDelay(u.zw)) * inside;
+  o *= mix(.78, 1., ss(.9, 2.8, length(u.xy) + p.y * .4));
   let fz = step(MZ0, p.z) * step(p.z, MZ1);
   o *= mix(1., mix(.55, 1., ss(0., 6., p.x - FAC)), fz * ss(ROOF + 2., ROOF - 4., p.y));
   let ax = ss(ARCX.x - .5, ARCX.x + 1.5, p.x) * ss(ARCX.y + .5, ARCX.y - 1.5, p.x) * step(ARCZ.x, p.z) * step(p.z, ARCZ.y) * step(p.y, 7.3);
@@ -254,7 +254,7 @@ fn skyOcc(p: vec3f) -> f32 {
 }
 fn amb(n: vec3f, sky: f32) -> vec3f {
   let up = n.y * .5 + .5;
-  return (mix(ZEN, vec3f(.40, .38, .42), .35) * 1.15 * up * up * (.3 + .7 * sky) + vec3f(.78, .64, .50) * .5 * (1. - up) * (.55 + .45 * sky) + vec3f(.12, .11, .10) * (.5 + .5 * sky));
+  return (mix(ZEN, vec3f(.62, .52, .46), .5) * 1.1 * up * up * (.3 + .7 * sky) + vec3f(.85, .68, .50) * .62 * (1. - up) * (.6 + .4 * sky) + vec3f(.14, .12, .10) * (.5 + .5 * sky));
 }
 fn aerial(c: vec3f, wp: vec3f) -> vec3f { return aerialAt(c, g.cam.xyz, wp, g.sun.xyz); }
 `;
@@ -302,7 +302,7 @@ fn arcade(u: f32, v: f32, bw: f32, ah: f32, v0: f32) -> f32 {
 // signed distance outside a two-centred arch of half width hw springing at ys with arc radius R (local u, v)
 fn archD(bu: f32, v: f32, hw: f32, ys: f32, R: f32) -> vec2f {
   let dv = v - ys;
-  if (dv <= 0.) { return vec2f(abs(bu) - hw, floor(dv / .55) + 50.); }
+  if (dv <= 0.) { return vec2f(1e3, 0.); }
   let cu = sign(bu) * (hw - R);
   let r = vec2f(bu - cu, dv);
   return vec2f(length(r) - R, floor(atan2(dv, abs(bu - cu)) / .13));
@@ -336,23 +336,19 @@ fn marble(p: vec2f, fw: f32, vein: f32) -> vec4f {
 }
 // what the polished floor mirrors: the lit east facade, the undersides of the open canopies, otherwise the sky
 fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
-  var col = skyCol(R, g.sun.xyz); var tm = 1e9;
+  var col = mix(skyCol(R, g.sun.xyz), vec3f(.72, .66, .64), .3); var tm = 1e9;
   if (R.x < -1e-3) {
     let t = (FAC + .3 - p.x) / R.x; let q = p + R * t;
-    if (q.y < ROOF + 1.2 && q.z > MZ0 && q.z < MZ1) {
-      tm = t;
-      let bu = fract((q.z - MZ0) / 6.) * 6. - 3.;
-      let dark = step(abs(bu), 2.) * step(.7, q.y) * step(q.y, 6.2 + 3. * sqrt(sat(1. - bu * bu * .25)));
-      col = vec3f(.80, .74, .64) * (SUNC * .82 * shadow1(q + vec3f(1., 0., 0.)) + vec3f(.35, .36, .42)) * (1. - .85 * dark);
-      col = aerialAt(col, q, p, g.sun.xyz);
-    }
+    let k = ss(ROOF + 3., ROOF - 4., q.y) * ss(MZ0 - 15., MZ0 + 15., q.z) * ss(MZ1 + 15., MZ1 - 15., q.z) * ss(260., 60., t);
+    col = mix(col, vec3f(.80, .74, .64) * (SUNC * .5 + vec3f(.35, .34, .36)), k);
+    if (k > .5) { tm = t; }
   }
   if (R.y > 1e-3) {
     let t = (15.6 - p.y) / R.y;
     if (t < tm) {
       let q = p + R * t; let u = uCell(q.xz);
-      let k = uOpen(g.mis.w, uDelay(u.zw)) * (1. - ss(11.6, 12.9, max(abs(u.x), abs(u.y))));
-      col = mix(col, vec3f(.95, .84, .70) * .85, k);
+      let k = uOpen(g.mis.w, uDelay(u.zw)) * (1. - ss(10.5, 13.5, max(abs(u.x), abs(u.y)))) * ss(200., 40., t);
+      col = mix(col, vec3f(.95, .84, .70) * .9, k);
     }
   }
   return col;
@@ -412,6 +408,10 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
     alb = select(vec3f(.83, .77, .67), vec3f(.86, .81, .72), mat == 20) * (.9 + .12 * B.h) * (.95 + .08 * C.c);
     let cj = max(cov(abs(fract(fv / .62) - .5) * .62 - .3, .006, fw3), cov(abs(fract(fu / 1.24 + floor(fv / .62) * .5) - .5) * 1.24 - .61, .006, fw3)) * wall;
     alb *= 1. - .22 * cj;
+    if (mat == 25 && on.y < -.7 && i.wp.x > 80.) {
+      let bm = max(cov(abs(fract(i.wp.z / 2.5) - .5) * 2.5, .14, fw3), cov(abs(i.wp.x - (ARCX.x + ARCX.y) * .5), .2, fw3));
+      alb = mix(vec3f(.78, .70, .58), vec3f(.55, .44, .32), bm);
+    }
     if (mat == 25 && abs(on.x) > .7) {
       var hw = 2.; var ys = 6.2; var R = 3.2; var bu = fract((i.wp.z - MZ0) / 6.) * 6. - 3.; var on_ = step(fv, 10.6);
       if (fv > 11.6) { bu = fract((i.wp.z - MZ0) / 3.) * 3. - 1.5 + select(-.25, .25, fract((i.wp.z - MZ0) / 6.) > .5); hw = .7; ys = 15.; R = 1.12; on_ = step(fv, 17.2); }
@@ -447,7 +447,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
         let ad = archD(fuo, y, st.z, st.y - st.z * 1.6, st.z * 1.5);
         let inN = step(st.x, y) * sat(-ad.x / max(fw3, 1e-3) + .5);
         let lantern = step(82., y) * step(y, 86.) * f32(i.m.w < 1.5) + step(54.4, y) * step(y, 57.8) * f32(i.m.w > 1.5);
-        alb = mix(alb, mix(alb * .72, vec3f(.04, .035, .03), lantern), inN);
+        alb = mix(alb, mix(alb * .6, vec3f(.04, .035, .03), lantern), inN);
         emi += vec3f(1., .66, .32) * 2.5 * inN * lantern;
         alb = mix(alb, alb * vec3f(.9, .82, .7), cov(max(ad.x, 0.) - .1, .07, fw3) * step(st.x, y));
       }
@@ -484,7 +484,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
     alb = vec3f(.16, .12, .08) * (.8 + .35 * B.h); bump = .5; gloss = .02;
   } else if (mat == 19) {
     let m = marble(i.wp.xz, fwp, 1. - ss(.0, .035 + fwp * .5, abs(vt.b - .52)));
-    alb = m.rgb; polish = m.a * .55; bump = 0.; gloss = .6;
+    alb = m.rgb; polish = m.a * .4; bump = 0.; gloss = .6;
   } else if (mat == 21) {
     // closed brass lattice screens (w 0) and brass doors with raised panels and studs (w 1), dark behind
     let u = i.wp.z; let v = i.wp.y;
@@ -523,8 +523,8 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   if (mat == 19) {
     // polished marble: a Fresnel mirror of the facade, the canopies and the sky, plus the sun's glint
     let Rr = reflect(-V, N); let fr = .04 + .96 * pow(1. - sat(dot(N, V)), 5.);
-    c = c * (1. - fr * polish) + mix(floorRefl(i.wp, Rr), vec3f(.75, .72, .72), .25) * fr * polish * mix(.5, 1., so);
-    c += E * pow(sat(dot(Rr, L)), 900.) * 30. * fr * polish;
+    c = c * (1. - fr * polish) + floorRefl(i.wp, Rr) * fr * polish * mix(.6, 1., so);
+    c += E * pow(sat(dot(Rr, L)), 3000.) * 8. * fr * polish;
   } else {
     c += skyCol(reflect(-V, N), L) * ao * spc * gloss * pow(1. - sat(dot(N, V)), 3.) * 1.5;
   }
@@ -792,7 +792,7 @@ const W_RAYS = S_G + W_FS + /*wgsl*/`
   let mu = dot(rd, sx);
   let gg = .72;
   let ph = (1. - gg * gg) / pow(1. + gg * gg - 2. * gg * mu, 1.5) * .07 + .1;
-  return vec4f(min(SUNC * vec3f(1., .84, .62) * acc * dt * .013 * ph * g.mis.y, vec3f(20.)), zl);
+  return vec4f(min(SUNC * vec3f(1., .84, .62) * acc * dt * .009 * ph * g.mis.y, vec3f(20.)), zl);
 }
 `;
 // depth-aware 3x3 blur of the half-res shafts (hides the sampling dither)
