@@ -40,7 +40,7 @@
       }
     } else if (/Digit[1-6]/.test(e.code)) {
       stop();
-      if (location.hash === '#capture') { F[UMC] = e.code === 'Digit1' ? 24 : UMAX; F[UMD] = 0; shadowDirty = 2; }
+      if (location.hash === '#capture') { F[UMC] = e.code === 'Digit1' ? 33 : UMAX; F[UMD] = 0; shadowDirty = 2; }
     }
   });
 }

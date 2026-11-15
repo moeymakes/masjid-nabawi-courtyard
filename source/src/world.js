@@ -157,12 +157,15 @@ function archPanel(m, P, nrm, u0, u1, yb, yt, a0, a1, y0, ys, rho, depth, fill, 
 function merlons(m, x0, z0, x1, z1, y, sp = 1.5) {
   const L = hypot(x1 - x0, z1 - z0), ux = (x1 - x0) / L, uz = (z1 - z0) / L;
   for (let t = sp / 2; t < L; t += sp) {
-    const cx = x0 + ux * t, cz = z0 + uz * t, a = abs(ux) > .5;
-    const d = .2;
-    for (const [w, h0, h1] of [[.4, 0, .5], [.27, .5, .82], [.15, .82, 1.1]]) {
-      if (a) box(m, cx - w, y + h0, cz - d, cx + w, y + h1, cz + d); else box(m, cx - d, y + h0, cz - w, cx + d, y + h1, cz + w);
+    // a leaf-shaped merlon: a slab with a pointed top, cut through by a small arch
+    const cx = x0 + ux * t, cz = z0 + uz * t, d = .16;
+    const P = (u, v, s) => [cx + ux * u - uz * s, y + v, cz + uz * u + ux * s];
+    const out = [[-.36, 0], ...pointed(-.36, .36, .62, .75, 5), [.36, 0]];
+    for (const s of [-d, d]) face(m, out.map(([u, v]) => P(u, v, s)), [-uz * s, 0, ux * s]);
+    for (let k = 0; k < out.length; k++) {
+      const p = out[k], q = out[(k + 1) % out.length], nu = q[1] - p[1], nv = -(q[0] - p[0]);
+      face(m, [P(p[0], p[1], -d), P(q[0], q[1], -d), P(q[0], q[1], d), P(p[0], p[1], d)], [-ux * nu, -nv, -uz * nu]);
     }
-    lathe(m, [[.2, 1.1], [0, 1.38]], 4, cx, y, cz, PI / 4);
   }
 }
 // Saudi-era minaret: square shaft to above the roof, three octagonal stages on corbelled balconies, a lantern, a cap
@@ -175,6 +178,11 @@ function meshMinaret(prof, base, baseH, k = 1) {
   box(m, -base / 2, 1.6, -base / 2, base / 2, baseH, base / 2);
   box(m, -base / 2 - .25, baseH - 1.2, -base / 2 - .25, base / 2 + .25, baseH - .5, base / 2 + .25);
   lathe(m, prof.map(([r, h]) => [r * k, h * k]), 8);
+  // round balconies over the octagonal ones: corbel, floor and a parapet with a lip
+  for (let i = 1; i < prof.length - 1; i++) if (prof[i][0] > prof[i - 1][0] + .6) {
+    const r0 = prof[i - 1][0] * k, r1 = prof[i][0] * k * 1.03, y0 = prof[i - 1][1] * k, y1 = prof[i][1] * k, y2 = prof[i + 1][1] * k;
+    lathe(m, [[r0 * 1.01, y0], [r0 + (r1 - r0) * .55, y0 + (y1 - y0) * .45], [r1, y1], [r1, y2], [r1 + .08, y2 + .04], [r1 + .08, y2 + .2], [r1 - .18, y2 + .2], [r1 - .18, y1 + .3]], 28);
+  }
   return m;
 }
 // alem: a short pole with stacked spheres and an upturned crescent on top (checked in silhouette: no cross)
