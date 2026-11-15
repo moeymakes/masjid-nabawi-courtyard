@@ -185,7 +185,7 @@ fn skyCol(rd: vec3f, sun: vec3f) -> vec3f {
   let h = vec2f(rd.x, rd.z); let hl = max(length(h), 1e-4);
   let tw = .5 + .5 * dot(h / hl, normalize(sun.xz));
   let mu = dot(rd, sun);
-  let hor = mix(vec3f(.74, .70, .76), vec3f(1.40, .90, .50), tw * tw);
+  let hor = mix(vec3f(.68, .72, .82), vec3f(1.40, .90, .50), tw * tw);
   var c = mix(hor, ZEN, pow(y, .4));
   c += vec3f(1., .5, .2) * .32 * pow(sat(1. - y * 4.), 3.) * tw * tw * tw;
   c += vec3f(.30, .10, .12) * ss(.0, .06, y) * ss(.26, .08, y) * (1. - tw) * (1. - tw);
@@ -201,7 +201,7 @@ fn aerialAt(c: vec3f, cam: vec3f, wp: vec3f, sun: vec3f) -> vec3f {
   let k2 = rd.y / 60.;
   let od2 = select((1. - exp(-k2 * d)) / k2, d, abs(k2) < 1e-7) * exp(-max(cam.y, -30.) / 60.);
   let T = exp(-BETA * od - vec3f(1.2e-4, 1.3e-4, 1.45e-4) * od2);
-  let ins = mix(skyCol(normalize(vec3f(rd.x, max(rd.y, 0.) * .3 + .012, rd.z)), sun), vec3f(.66, .66, .72), ss(900., 6000., d) * .4);
+  let ins = mix(skyCol(normalize(vec3f(rd.x, max(rd.y, 0.) * .3 + .012, rd.z)), sun), vec3f(.64, .68, .78), ss(900., 6000., d) * .4);
   return c * T + ins * (1. - T);
 }
 fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2. * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
@@ -238,7 +238,8 @@ fn shadow1(p: vec3f) -> f32 {
 fn shadow9(p: vec3f) -> f32 {
   if (LOW) { return shadow1(p); }
   let s = shUV(p); let e = 1.25 / ${SHADOW}.; var a = 0.;
-  for (var x = 0; x < 4; x++) { for (var y = 0; y < 4; y++) { a += textureSampleCompareLevel(tSh, sS, s.xy + (vec2f(f32(x), f32(y)) - 1.5) * e, s.z); } }
+  let r = h2(floor(p.xz * 61.) + floor(p.y * 47.)) * TAU; let cr = cos(r); let sr = sin(r);
+  for (var x = 0; x < 4; x++) { for (var y = 0; y < 4; y++) { let o = vec2f(f32(x), f32(y)) - 1.5; a += textureSampleCompareLevel(tSh, sS, s.xy + vec2f(o.x * cr - o.y * sr, o.x * sr + o.y * cr) * e, s.z); } }
   return mix(1., a / 16., shK(s));
 }
 // how much open sky a point sees: less under an open canopy, at the foot of a column, by the facade, in the arcade
@@ -332,9 +333,9 @@ fn marble(p: vec2f, fw: f32, vein: f32) -> vec4f {
   col = mix(col, vec3f(.62, .61, .60), vein * .22 * (1. - border));
   col = mix(col, vec3f(.73, .66, .56), sat(-star / max(fw, 1e-3) + .5) * sat((star + .55) / max(fw, 1e-3) + .5) * .85);
   col = mix(col, vec3f(.70, .62, .52), dia * .8);
-  col = mix(col, vec3f(.62, .50, .37), max(max(pin, inner), max(cov(abs(oct), .09, fw), cov(abs(cd), .08, fw))));
+  col = mix(col, vec3f(.64, .48, .30), max(max(pin, inner), max(cov(abs(oct), .09, fw), cov(abs(cd), .08, fw))));
   col = mix(col, vec3f(.40, .40, .41), cov(abs(cd + 1.1), .22, fw));
-  col = mix(col, vec3f(.34, .34, .355), max(border, diag));
+  col = mix(col, vec3f(.30, .30, .315), max(border, diag));
   col = mix(col, vec3f(.44, .43, .42), ring);
   col *= 1. - .35 * joint;
   let pave = vec3f(.47, .44, .40) * (.9 + .1 * h2(floor(p / 2.4)));
@@ -464,7 +465,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
     }
     bump = .05; gloss = .12;
   } else if (mat == 8) {
-    let rib = ss(.4, .5, abs(fract(atan2(i.op.z, i.op.x) / TAU * 32.) - .5)) * .3;
+    let rib = ss(.38, .5, abs(fract(atan2(i.op.z, i.op.x) / TAU * 32.) - .5)) * .5;
     alb = vec3f(.035, .22, .11) * (1. - rib) * (.92 + .16 * B.h); gloss = .32; bump = .05;
     let drum = step(i.op.y, 4.3);
     let wa = fract(atan2(i.op.z, i.op.x) / TAU * 16.) - .5;
@@ -490,8 +491,8 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   } else if (mat == 14) {
     alb = vec3f(.16, .12, .08) * (.8 + .35 * B.h); bump = .5; gloss = .02;
   } else if (mat == 19) {
-    let m = marble(i.wp.xz, fwp, (1. - ss(.0, .05 + fwp * .5, abs(vt.b - .52))) * .55 + ss(.45, .75, vt.a) * .25);
-    alb = m.rgb; polish = m.a * .4; bump = 0.; gloss = .6;
+    let m = marble(i.wp.xz, fwp, (1. - ss(.0, .05 + fwp * .5, abs(vt.b - .52))) * .55 + ss(.45, .75, vt.a) * .08);
+    alb = m.rgb; polish = m.a * .5; bump = 0.; gloss = .6;
   } else if (mat == 21) {
     // closed brass lattice screens (w 0) and brass doors with raised panels and studs (w 1), dark behind
     let u = i.wp.z; let v = i.wp.y;
@@ -503,7 +504,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
       let c = vec2f(u / .8, (v - .4) / 1.05); let q = abs(fract(c) - .5) * vec2f(.8, 1.05);
       let fr = max(cov(q.x - .37, .04, fw3), cov(q.y - .49, .04, fw3));
       let st = cov(length(abs(fract(vec2f(u, v) / .2) - .5) * .2), .025, fw3) * (1. - fr);
-      alb = vec3f(.44, .31, .14) * (1. - .6 * fr) * (1. + .5 * st); metal = .6; gloss = .5;
+      alb = vec3f(.34, .24, .11) * (1. - .6 * fr) * (1. + .6 * st); metal = .6; gloss = .5;
     }
     bump = .02;
   } else if (mat == 22) {
@@ -519,10 +520,12 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   let L = g.sun.xyz; let V = normalize(g.cam.xyz - i.wp);
   let so = select(skyOcc(i.wp + n0 * .3), 1., far || mat == 17);
   var ao = so * vao * select(1., i.ao, far || mat >= 20 || mat == 12);
-  let sh = select(shadow9(i.wp + n0 * (.12 + dist * .0015) + g.sun.xyz * .12), sat(i.ao * 1.6 - .3), far);
+  let sh = select(shadow9(i.wp + n0 * (.2 + dist * .003) + g.sun.xyz * .15), sat(i.ao * 1.6 - .3), far);
   let E = SUNC * sh;
   let ndl = sat(dot(N, L));
-  let am = amb(N, so) * ao;
+  let uc = uCell(i.wp.xz);
+  let under = uOpen(g.mis.w, uDelay(uc.zw)) * (1. - ss(11., 14., max(abs(uc.x), abs(uc.y)))) * ss(15.5, 12., i.wp.y) * f32(!far);
+  let am = (amb(N, so) + vec3f(.95, .86, .74) * .42 * under * sat(N.y * .5 + .6)) * ao;
   var c = alb * (E * ndl + am) + emi;
   let Hh = normalize(V + L);
   let spc = mix(vec3f(.04), alb, metal);
@@ -585,10 +588,10 @@ fn mem(a: f32, s: f32, e: f32, sd: f32) -> vec3f {
   let sunSide = select(-1., 1., dot(ng, L) > 0.);
   let Es = SUNC * shadow9(i.wp + ng * sunSide * .4);
   let ndl = abs(dot(ng, L));
-  let lit = select(.3, 1., select(-1., 1., top) == sunSide);
+  let lit = select(.55, 1., select(-1., 1., top) == sunSide);
   let so = skyOcc(i.wp + n * 1.5);
   var alb = vec3f(.90, .89, .86) * (1. - .2 * seam) * (.97 + .06 * h2(vec2f(floor(a / TAU * 32.), i.k.y * 91.)));
-  let bounce = vec3f(.95, .80, .62) * .5 * sat(-n.y) * mix(.6, 1., e);
+  let bounce = vec3f(.98, .86, .70) * .72 * sat(-n.y) * mix(.6, 1., e);
   var c = alb * (Es * ndl * lit + amb(n, so) + bounce);
   c += Es * pow(sat(dot(n, normalize(V + L))), 40.) * .08 * f32(top);
   c = mix(c, vec3f(.55, .55, .56) * (amb(n, so) + bounce * .6), arm);
@@ -623,7 +626,7 @@ fn grassSway(p: vec2f, h: f32, t: f32) -> vec2f {
   switch ty {
     case 0 { col = mix(vec3f(.09, .13, .045), vec3f(.17, .18, .07), s1); pr = vec4f(1., .4, 0., 0.); fold = .5; }
     case 1 { col = mix(vec3f(.20, .14, .075), vec3f(.28, .20, .10), s1); pr = vec4f(1., .3, 0., 0.); fold = .3; }
-    case 2 { col = mix(vec3f(.14, .19, .07), vec3f(.25, .27, .11), s1); pr = vec4f(0., .8, 0., 0.); }
+    case 2 { col = mix(vec3f(.11, .15, .06), vec3f(.20, .22, .09), s1); pr = vec4f(0., .8, 0., 0.); }
     case 3 { col = mix(vec3f(.20, .21, .14), vec3f(.28, .23, .13), s1); pr = vec4f(0., .4, 0., 0.); }
     case 4 { col = mix(vec3f(.12, .16, .06), vec3f(.18, .20, .08), s1); pr = vec4f(0., .6, 0., 0.); }
     default { col = mix(vec3f(.09, .12, .04), vec3f(.15, .16, .05), s1); pr = vec4f(0., .6, 0., 0.); }
@@ -845,7 +848,7 @@ fn tmap(x: vec3f) -> vec3f { return clamp((x * (2.51 * x + .03)) / (x * (2.43 * 
   }
   var c = textureLoad(tS, px, 0).rgb + acc / ws;
   let bl = textureSampleLevel(tB, sC, uv, 0.).rgb;
-  c = mix(c, bl, .018) + bl * .008;
+  c = mix(c, bl, .012) + bl * .005;
   c *= g.mis.x;
   let q = uv - .5;
   c *= 1. - dot(q, q) * .45;

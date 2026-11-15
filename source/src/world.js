@@ -19,7 +19,7 @@ const ARCX = [92, 100], ARCZ = [-224, 216];
 const BED = [103, 131, -226, 220];
 // viewpoints: x, eye height above the floor (absolute y when flying), z, look-at x, y, z, flying
 const POSES = [
-  [60, 1.7, 52, -116, 26, 120, 0],
+  [62, 1.7, 56, -116, 26, 120, 0],
   [-64, 1.7, -6, -89, 56, 10, 0],
   [-60, 1.7, -96, 100, 9, -66, 0],
   [96, 1.7, -150, 96.3, 3.3, 0, 0],
@@ -211,6 +211,9 @@ function meshCityBox(w, h, d, step) {
   box(m, -w / 2 - .2, h, -d / 2 - .2, w / 2 + .2, h + .9, d / 2 + .2);
   if (step) { const s = h > 20 ? h * .25 : 3.3; box(m, -w * .3, h, -d * .3, w * .25, h + s, d * .3); box(m, -w * .3 - .15, h + s, -d * .3 - .15, w * .25 + .15, h + s + .7, d * .3 + .15); }
   box(m, w * .15, h + .9, -d * .3, w * .15 + 2.4, h + 3.2, -d * .3 + 2.4);
+  // water tanks and a parapet line: rooftop clutter breaks the box silhouettes
+  lathe(m, [[.9, h + .9], [.9, h + 2.4], [0, h + 2.6]], 6, -w * .32, 0, d * .28);
+  lathe(m, [[.7, h + .9], [.7, h + 2.1], [0, h + 2.3]], 6, w * .3, 0, d * .32);
   return m;
 }
 function meshBird() {
@@ -466,7 +469,7 @@ function makeWorld(FAR, flyPts) {
     for (let j = 0; j < 12; j++) for (let i = 0; i < 12; i++) {
       if (i % sx === 0 || j % sz === 0 || (i === lane && j > 6)) continue;
       const lx = i * 30 - 165 + rr(-3, 3), lz = j * 30 - 165 + rr(-3, 3), x = dx + lx * ca - lz * sa, z = dz + lx * sa + lz * ca, c = farB(x, z, 0);
-      if (c < .05 || rnd() > min(1, c * 3.2) * (1 - .55 * sstep(1200, 3200, hypot(x, z))) || rnd() < .08) continue;
+      if (c < .05 || rnd() > min(1, c * 3.2) * (1 - .65 * sstep(1000, 3000, hypot(x, z))) || rnd() < .12) continue;
       if (x > -460 && x < 158 && abs(z) < 395) continue;
       const dm = hypot(x + 120, z * 1.1);
       let t = CITY_LOW[(rnd() * CITY_LOW.length) | 0];
