@@ -34,7 +34,7 @@
       if (flying) stop();
       else {
         flying = true; fly = true; bench = e.code === 'KeyB'; F[FLT] = 0; last = F[LAST]; nFrame = nGpu = 0;
-        F[UMC] = 6; F[UMD] = 1; shadowDirty = 2;
+        F[UMC] = 14; F[UMD] = 1; shadowDirty = 2;
         // a benchmark hides the stats line and holds the resolution: dynT at -Infinity keeps frame() from tuning it
         if (bench) { hud = false; info.textContent = ''; dynT = -Infinity; }
       }
