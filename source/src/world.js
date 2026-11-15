@@ -19,12 +19,12 @@ const ARCX = [92, 100], ARCZ = [-224, 216];
 const BED = [103, 131, -226, 220];
 // viewpoints: x, eye height above the floor (absolute y when flying), z, look-at x, y, z, flying
 const POSES = [
-  [45, 1.7, 28, -116, 30, 128, 0],
+  [60, 1.7, 52, -116, 26, 120, 0],
   [-64, 1.7, -6, -89, 56, 10, 0],
   [-60, 1.7, -96, 100, 9, -66, 0],
   [96, 1.7, -150, 96.3, 3.3, 0, 0],
-  [-52, 1.7, -12, -90, 8.5, -20, 0],
-  [150, 115, -175, -120, 18, 80, 1],
+  [-52, 1.7, -12, -90, 10.5, -20, 0],
+  [150, 115, -175, -120, 4, 80, 1],
 ];
 // 60 s scripted camera path (position + look-at, absolute heights), along the lanes between the columns
 const FLY = new Float32Array([
@@ -32,7 +32,7 @@ const FLY = new Float32Array([
   22.5, 3.5, 73.5, -116, 32, 128,
   -4.5, 3, 30, -90, 10, -20,
   -58.5, 2.8, -8, -90, 9, -20,
-  -70, 3, 0, -89, 60, 10,
+  -70, 3, 0, -89, 45, 10,
   -58.5, 4, 30, -40, 8, 120,
   -58.5, 4, 100.5, 0, 6, 140,
   -31.5, 4, 114, 40, 5, 140,
@@ -49,7 +49,7 @@ const FLY = new Float32Array([
   82, 8, -90, -90, 30, -60,
   84, 30, -140, -120, 20, 60,
   40, 60, -165, -120, 20, 60,
-  150, 115, -175, -120, 18, 80,
+  150, 115, -175, -120, 4, 80,
 ]);
 const FLYR = 360, FLYH = 150;
 const LANT = [], GATEDOME = [];
@@ -287,11 +287,12 @@ function makeWorld(FAR, flyPts) {
     cbox(FAC, X + .6, -50, h + 1.5, z - w / 2 - .5, z + w / 2 + .5);
     for (const s of [-1, 1]) {
       const lz = z + s * (w / 2 - (w - ow) / 4);
-      box(bronze, X, 5.2, lz - .05, X + .5, 5.3, lz + .05);
-      lathe(bronze, [[.05, 0], [.22, .05], [.22, .12], [.05, .2], [.02, .5]], 8, X + .55, 5.95, lz);
-      lathe(glass, [[.16, 0], [.2, .25], [.2, .65], [.16, .8]], 8, X + .55, 5.15, lz);
-      lathe(bronze, [[.19, 0], [.24, .1], [.05, .4]], 8, X + .55, 5.9, lz);
-      LANT.push(X + .55, 5.6, lz);
+      box(bronze, X, 5.4, lz - .07, X + .8, 5.55, lz + .07);
+      lathe(bronze, [[.08, 0], [.36, .08], [.36, .2], [.08, .32], [.03, .8]], 8, X + .85, 6.5, lz);
+      lathe(glass, [[.26, 0], [.32, .4], [.32, 1.05], [.26, 1.3]], 8, X + .85, 5.2, lz);
+      lathe(bronze, [[.3, 0], [.38, .16], [.08, .64]], 8, X + .85, 6.45, lz);
+      lathe(bronze, [[.08, 0], [.3, .1], [.06, .2]], 8, X + .85, 5.05, lz);
+      LANT.push(X + .85, 5.8, lz);
     }
     if (main) { const dm = new Mesh(); lathe(dm, domeProf(3.2, 1.2, 1.1), 24, FAC + 1.4, h + .5, z); solid(add(dm), 0, 0, 0, 1, Q0, 11, 0); GATEDOME.push(FAC + 1.4, h + .5 + 5, z); }
   }
@@ -441,11 +442,11 @@ function makeWorld(FAR, flyPts) {
   }
   // planted bed: grass and low shrubs, thicker toward the curbs
   rseed(10);
-  for (let i = 0; i < 26000; i++) {
+  for (let i = 0; i < 60000; i++) {
     const x = rr(BED[0] + .5, BED[1] - .5), z = rr(BED[2] + .5, BED[3] - .5);
     if (rnd() > .45 + .5 * fbm(x * .1, 4, z * .1, 2)) continue;
     const yw = rnd() * TAU;
-    for (let j = 0; j < 4; j++) grass(x + rr(-.12, .12), .3, z + rr(-.12, .12), rr(.18, .42), yw + j * 1.6, rr(.1, .7), rr(.02, .04), 0, 2, rnd(), rnd(), rr(.3, .8));
+    for (let j = 0; j < 6; j++) grass(x + rr(-.14, .14), .3, z + rr(-.14, .14), rr(.22, .5), yw + j * 1.05, rr(.1, .8), rr(.02, .04), 0, 2, rnd(), rnd(), rr(.3, .8));
   }
 
   // --- the city beyond: hotels east and north, low houses elsewhere (the far ground model's city mask)
@@ -458,7 +459,7 @@ function makeWorld(FAR, flyPts) {
       if (i % sx === 0 || j % sz === 0 || (i === lane && j > 6)) continue;
       const lx = i * 30 - 165 + rr(-3, 3), lz = j * 30 - 165 + rr(-3, 3), x = dx + lx * ca - lz * sa, z = dz + lx * sa + lz * ca, c = farB(x, z, 0);
       if (c < .05 || rnd() > min(1, c * 3.2) * (1 - .55 * sstep(1200, 3200, hypot(x, z))) || rnd() < .08) continue;
-      if (x > -460 && x < 175 && abs(z) < 395) continue;
+      if (x > -460 && x < 158 && abs(z) < 395) continue;
       const dm = hypot(x + 120, z * 1.1);
       let t = CITY_LOW[(rnd() * CITY_LOW.length) | 0];
       if (dm < 750 && (x > 175 || z < -395) && rnd() < .6) t = [6, 7, 8, 12, 15, 16, 10][(rnd() * 7) | 0];

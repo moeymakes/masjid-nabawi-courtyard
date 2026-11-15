@@ -1,7 +1,7 @@
 {
-  "name": "madinah-horizon",
+  "name": "nabawi-courtyard",
   "private": true,
-  "description": "A walkable procedural world around Madinah, rendered with WebGPU, bundled into one HTML file",
+  "description": "A walkable procedural world of the plaza of the Prophet's Mosque, rendered with WebGPU, bundled into one HTML file",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",

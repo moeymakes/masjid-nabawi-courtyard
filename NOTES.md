@@ -5,12 +5,14 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
 
 ## State (update after every step)
 
-- Phase: 5 (critic loop). Iteration 01 capture running (2560x1440, flight, bench).
-- Last good capture: verify/iter-00 (1280x720 smoke test, renders, 0 console errors)
-- Perf: not measured yet
-- Critic: none yet
-- Next step: critic on iter-01, fix top items, iter-02
-- Not done yet: README, LICENSE, screenshots, index.html captures at High and Low, final commit
+- Phase: 5 (critic loop). Iteration 03 capture running.
+- iter-02: critic highest severity major (13 items: flight clipping in the arcade, floor mirror ghosts, black
+  columns under the canopies, stair-stepped shadows, sun glint orbs, tiled city, plain roof...). All addressed in
+  commit "Iteration 02: ...".
+- Perf (iter-02, RTX 3070, 2560x1440, 60 s flight, GPU possibly shared): GPU avg 4.41, p99 10.60, max 13.67 ms
+- Last good capture: verify/iter-02 (0 console errors)
+- Next step: critic on iter-03, fix, iter-04. Stop at highest severity minor or after 6 critic iterations.
+- Not done yet: screenshots, index.html captures at High and Low, final README numbers
 
 ## What changed from Madinah Horizon
 

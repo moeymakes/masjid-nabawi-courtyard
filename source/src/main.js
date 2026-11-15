@@ -299,7 +299,7 @@ const umbReplay = () => { F[UMD] = F[UMC] > 0 ? -3 : 1; F[UMW] = 2.5; };
 // ---------------------------------------------------------------- frame
 let hud = false, fly = false;
 let kf = 0, kb = 0, kl = 0, kr = 0, ku = 0, kd = 0, ks = 0, mdx = 0, mdy = 0, lkx = 0, lky = 0, l2x = 0, l2y = 0, hN = 0, hMax = 0, hMin = 1e9, hPer = 1e9, hLate = 0, hTot = 0, tId = -1, tN = 0, tx0 = 0, ty0 = 0, tx = 0, ty = 0;
-const TANH = 0.58, NEAR_ = 0.1, EXPO = 0.62, RAYS = 1;
+const TANH = 0.58, NEAR_ = 0.1, EXPO = 0.52, RAYS = 1;
 const submitList = [null];
 const rowOrd = new Uint8Array(CELLS);
 // draws the cells of a cell-sorted buffer that are in view and within [minD, maxD) (scaled by det) as merged
