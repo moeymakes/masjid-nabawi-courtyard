@@ -447,7 +447,7 @@ function frame(now) {
     const run = ks || tN > 1, mf = tId >= 0 ? 0.7 : kf - kb, mr = kr - kl, cp = cos(pitch), sy = sin(yaw), cw = cos(yaw);
     let vx, vy, vz;
     if (fly) {
-      const sp = run ? 40 : 11, k = 1 - exp(-dt * 3), mu = ku - kd;
+      const sp = run ? 70 : 20, k = 1 - exp(-dt * 3), mu = ku - kd;
       vx = F[VX] + ((sy * cp * mf + cw * mr) * sp - F[VX]) * k; vy = F[VY] + ((sin(pitch) * mf + mu) * sp - F[VY]) * k; vz = F[VZ] + ((-cw * cp * mf + sy * mr) * sp - F[VZ]) * k;
     } else {
       const sp = run ? 8 : 3.2, k = 1 - exp(-dt * 7), l = hypot(mf, mr) || 1, f2 = mf / max(l, 1), r2 = mr / max(l, 1);
