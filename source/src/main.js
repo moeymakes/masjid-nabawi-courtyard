@@ -526,6 +526,13 @@ const go = () => {
 };
 { const bs = $('umb').querySelectorAll('button'), lit = () => bs.forEach((b, i) => { b.className = i === umbMode ? 'on' : ''; }); bs.forEach((b, i) => { b.onclick = () => { umbSet(i); lit(); }; }); lit(); }
 bDive.onclick = go; $('o').onclick = () => ui(true); $('fl').onclick = () => { fly = !fly; F[VY] = 0; };
+// touch up / down: held like E and Q
+for (const [id, code] of [['up', 'KeyE'], ['dn', 'KeyQ']]) {
+  const b = $(id), hold = (v) => (e) => { e.preventDefault(); key({ code, repeat: false }, v); };
+  b.addEventListener('pointerdown', hold(1));
+  for (const t of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(t, hold(0));
+  b.oncontextmenu = (e) => e.preventDefault();
+}
 $('tm').querySelectorAll('button').forEach((b, i) => { if (i === TOD) b.className = 'on'; else b.onclick = () => { keep('nabawiTime', i); location.reload(); }; });
 $('q').querySelectorAll('button').forEach((b, i) => { if (i === 2 - LV) b.className = 'on'; else b.onclick = () => { keep('nabawi', 2 - i); location.reload(); }; });
 document.addEventListener('pointerlockchange', () => ui(!document.pointerLockElement));
