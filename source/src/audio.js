@@ -53,7 +53,7 @@ function mkSound(ac) {
     if (t > tB) { // a small bird: a burst of quick high chirps
       let tt = t; const pan = rr(-.8, .8), f = rr(2600, 4200);
       for (let n = 2 + rnd() * 5 | 0; n--;) { play(chirp, tt, f * rr(.9, 1.1), f * rr(1.2, 1.5), .07, rr(.015, .03) * (inGrove ? 1 : .3), .005, pan); tt += rr(.08, .16); }
-      tB = tt + rr(1.5, 7);
+      tB = tt + rr(1.5, 7) / TP.birds;
     }
     if (t > tD) { // a pigeon: a soft rolling coo-roo-coo, now and then a burst of wing claps
       let tt = t; const pan = rr(-.7, .7), f = rr(250, 300);

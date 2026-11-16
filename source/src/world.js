@@ -6,7 +6,7 @@
 // arcade and a palm bed close it to the east. Distances are composed and compressed, not to scale.
 
 // sun 9 degrees up in the east-south-east: just after sunrise, straight onto the east facade
-const SUN = (() => { const v = [.97, .16, .18]; const l = hypot(...v); return v.map((c) => c / l); })();
+const SUN = (() => { const v = TP.sun; const l = hypot(...v); return v.map((c) => c / l); })();
 const FAC = -90, MZ0 = -210, MZ1 = 200, MX0 = -330, ROOF = 19;
 // umbrella field: columns at x0 + i*sp, z0 + j*sp; they open as a wave spreading from the main gate
 const UX0 = -72, UZ0 = -237, USP = 27, UNX = 6, UNZ = 18, UGATE = [-88, -20];

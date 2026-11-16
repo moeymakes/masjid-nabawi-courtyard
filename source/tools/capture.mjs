@@ -7,7 +7,7 @@
 //   node tools/capture.mjs ../dev.html --out ../verify/iter-01 --bench 60                  + benchmark report
 //   flags combine; --poses 0 skips stills; --chrome /path overrides the browser; --settle ms per pose (2000);
 //   --flight-key KeyP when the world uses F for itself (e.g. a walk/fly toggle);
-//   --storage key=value seeds localStorage before load (e.g. --storage madinah=2 to test the Low level)
+//   --storage key=value seeds localStorage before load, repeatable (e.g. --storage madinah=2 to test the Low level)
 //
 // Page contract (the skill's template follows it; Abyssal Garden's index.html does too):
 //   body.className  'l' loading · 'm' menu · 'g' in the scene · 'l e' failed (message in #s)
@@ -47,8 +47,8 @@ const ctx = browser.contexts()[0] || await browser.newContext();
 const page = await ctx.newPage();
 await page.setViewportSize({ width: W, height: H });
 await page.addInitScript({ path: path.join(here, 'grab-shim.js') });
-const seed = opt('storage', '');
-if (seed) await page.addInitScript(([k, v]) => { if (!sessionStorage.seeded) { localStorage.setItem(k, v); sessionStorage.seeded = 1; } }, seed.split('='));
+const seeds = argv.flatMap((a, i) => (a === '--storage' && argv[i + 1] ? [argv[i + 1].split('=')] : []));
+if (seeds.length) await page.addInitScript((kv) => { if (!sessionStorage.seeded) { for (const [k, v] of kv) localStorage.setItem(k, v); sessionStorage.seeded = 1; } }, seeds);
 const run = { file: path.resolve(file), size: `${W}x${H}`, errors: [], warnings: [], shots: [] };
 page.on('console', (m) => { if (m.type() === 'error') run.errors.push(m.text()); else if (m.type() === 'warning') run.warnings.push(m.text()); });
 page.on('pageerror', (e) => run.errors.push('pageerror: ' + e.message));

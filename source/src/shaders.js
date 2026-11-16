@@ -161,8 +161,10 @@ fn kar(c: vec3f) -> vec4f { let w = 1. / (1. + max(c.r, max(c.g, c.b))); return 
 // ---------------------------------------------------------------- shared: uniforms, sky, air, layout
 const S_G = /*wgsl*/`
 struct G { vp: mat4x4f, sm: mat4x4f, cam: vec4f, right: vec4f, up: vec4f, fwd: vec4f, sun: vec4f, res: vec4f, mis: vec4f };
-const SUNC = vec3f(3.5, 2.25, 1.15);
-const ZEN = vec3f(.07, .21, .60);
+const SUNC = vec3f(${TP.sunc.join(', ')});
+const ZEN = vec3f(${TP.zen.join(', ')});
+const COOLH = vec3f(${TP.cool.join(', ')}); const WARMH = vec3f(${TP.warm.join(', ')}); const BAND = vec3f(${TP.band.join(', ')}); const ROSE = vec3f(${TP.rose.join(', ')}); const FARBLUE = vec3f(${TP.farblue.join(', ')}); const AMBC = vec3f(${TP.ambc.join(', ')});
+const GND = ${TP.gnd}; const CLOUDK = ${TP.cloud}; const LIGHTS = ${TP.lights}; const LITF = ${TP.litf}; const NIGHT = ${TP.night}.;
 const BETA = vec3f(.8e-4, .98e-4, 1.25e-4);
 const HSCALE = 300.;
 const TAU = 6.2831853;
@@ -185,12 +187,12 @@ fn skyCol(rd: vec3f, sun: vec3f) -> vec3f {
   let h = vec2f(rd.x, rd.z); let hl = max(length(h), 1e-4);
   let tw = .5 + .5 * dot(h / hl, normalize(sun.xz));
   let mu = dot(rd, sun);
-  let hor = mix(vec3f(.68, .72, .82), vec3f(1.40, .90, .50), tw * tw);
+  let hor = mix(COOLH, WARMH, tw * tw);
   var c = mix(hor, ZEN, pow(y, .4));
-  c += vec3f(1., .5, .2) * .32 * pow(sat(1. - y * 4.), 3.) * tw * tw * tw;
-  c += vec3f(.30, .10, .12) * ss(.0, .06, y) * ss(.26, .08, y) * (1. - tw) * (1. - tw);
+  c += BAND * .32 * pow(sat(1. - y * 4.), 3.) * mix(tw * tw * tw, .5 + .5 * tw, NIGHT);
+  c += ROSE * ss(.0, .06, y) * ss(.26, .08, y) * (1. - tw) * (1. - tw);
   c += SUNC * (.05 * pow(max(mu, 0.), 5.) + .13 * pow(max(mu, 0.), 40.) + .3 * pow(max(mu, 0.), 500.));
-  return mix(c, mix(vec3f(.52, .50, .52), vec3f(1., .70, .45), tw), sat(-rd.y * 5.));
+  return mix(c, mix(vec3f(.52, .50, .52), vec3f(1., .70, .45), tw) * GND, sat(-rd.y * 5.));
 }
 // aerial perspective: exponential-height haze integrated in closed form along the view ray; distant things
 // fade toward the sky's horizon colour in their direction (warm toward the sun, rose-grey away from it)
@@ -201,7 +203,7 @@ fn aerialAt(c: vec3f, cam: vec3f, wp: vec3f, sun: vec3f) -> vec3f {
   let k2 = rd.y / 60.;
   let od2 = select((1. - exp(-k2 * d)) / k2, d, abs(k2) < 1e-7) * exp(-max(cam.y, -30.) / 60.);
   let T = exp(-BETA * od - vec3f(1.2e-4, 1.3e-4, 1.45e-4) * od2);
-  let ins = mix(skyCol(normalize(vec3f(rd.x, max(rd.y, 0.) * .3 + .012, rd.z)), sun), vec3f(.64, .68, .78), ss(900., 6000., d) * .4);
+  let ins = mix(skyCol(normalize(vec3f(rd.x, max(rd.y, 0.) * .3 + .012, rd.z)), sun), FARBLUE, ss(900., 6000., d) * .4);
   return c * T + ins * (1. - T);
 }
 fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2. * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
@@ -256,7 +258,7 @@ fn skyOcc(p: vec3f) -> f32 {
 }
 fn amb(n: vec3f, sky: f32) -> vec3f {
   let up = n.y * .5 + .5;
-  return (mix(ZEN, vec3f(.80, .69, .58), .62) * 1.05 * up * up * (.35 + .65 * sky) + vec3f(.86, .78, .68) * .72 * (1. - up) * (.65 + .35 * sky) + vec3f(.12, .11, .10) * (.5 + .5 * sky));
+  return AMBC * (mix(ZEN, vec3f(.80, .69, .58), .62) * 1.05 * up * up * (.35 + .65 * sky) + vec3f(.86, .78, .68) * .72 * (1. - up) * (.65 + .35 * sky) + vec3f(.12, .11, .10) * (.5 + .5 * sky));
 }
 fn aerial(c: vec3f, wp: vec3f) -> vec3f { return aerialAt(c, g.cam.xyz, wp, g.sun.xyz); }
 `;
@@ -394,10 +396,10 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
       let bw = mix(2.6, 4.6, hs(sd * 11.)); let ww = mix(.18, .34, hs(sd * 13.));
       let wx = fract(fu / bw); let wy = fract(fv / 3.3); let flr = floor(fv / 3.3); let bay = floor(fu / bw);
       let win = step(.5 - ww, wx) * step(wx, .5 + ww) * step(.3, wy) * step(wy, .74) * step(1., flr) * wall * step(fv, i.m.w - 1.) * wfade * step(.15, hs(bay * 3.1 + flr * 5.7 + sd));
-      let lit = step(.9, hs(flr * 13.1 + bay * 7.7 + sd * 31.));
+      let lit = step(LITF, hs(flr * 13.1 + bay * 7.7 + sd * 31.));
       alb = mix(alb, vec3f(.07, .08, .09), win * .9);
       alb = mix(alb, alb * vec3f(.82, .8, .78), (1. - wfade) * wall * .5);
-      emi = vec3f(1., .62, .30) * .5 * win * lit;
+      emi = vec3f(1., .62, .30) * .5 * win * lit * LIGHTS;
       alb = mix(alb, alb * vec3f(.5, .47, .45), ss(.6, .9, on.y));
       gloss = mix(.08, .55, win);
     } else {
@@ -516,6 +518,12 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   } else if (mat == 27) {
     alb = mix(vec3f(.46, .45, .45), vec3f(.60, .59, .57), ss(.4, .7, C.c)) * (.88 + .24 * hs(floor(C.h * 9.))); gloss = .55; bump = .15;
   }
+  // night: the Masjid is floodlit, its domes and finials glow, the umbrella fabric is lit from inside
+  if (NIGHT > .5) {
+    var k = 0.;
+    if (mat == 25 || mat == 20 || mat == 7) { k = .3; } else if (mat == 8 || mat == 10) { k = 1.5; } else if (mat == 9) { k = .35; } else if (mat == 11) { k = .5; } else if (mat == 19) { k = .05; }
+    emi += alb * k;
+  }
   let N = normalize(qrot(i.q, normalize(on + (A.n * .8 + B.n * .6 + C.n * .4 * ss(70., 10., dist)) * bump)));
   let L = g.sun.xyz; let V = normalize(g.cam.xyz - i.wp);
   let so = select(skyOcc(i.wp + n0 * .3), 1., far || mat == 17);
@@ -525,7 +533,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   let ndl = sat(dot(N, L));
   let uc = uCell(i.wp.xz);
   let under = uOpen(g.mis.w, uDelay(uc.zw)) * (1. - ss(11., 14., max(abs(uc.x), abs(uc.y)))) * ss(15.5, 12., i.wp.y) * f32(!far);
-  let am = (amb(N, so) + vec3f(.95, .86, .74) * .42 * under * sat(N.y * .5 + .6)) * ao;
+  let am = (amb(N, so) + (AMBC * vec3f(.95, .86, .74) * .42 + vec3f(1., .78, .5) * .5 * NIGHT) * under * sat(N.y * .5 + .6)) * ao;
   var c = alb * (E * ndl + am) + emi;
   let Hh = normalize(V + L);
   let spc = mix(vec3f(.04), alb, metal);
@@ -740,10 +748,15 @@ struct VO { @builtin(position) cp: vec4f, @location(0) d: vec3f };
     let r = vec2f(q.x * .96 + q.y * .28, q.y * .96 - q.x * .28) * vec2f(.00011, .00042) + vec2f(g.cam.w * .002, 0.);
     let n = fbm(vec3f(r, 1.3), 5) + .35 * (fbm(vec3f(r * 3.1, 4.1), 3) - .5);
     let cov_ = ss(.6, .86, n) * ss(.03, .2, rd.y) * (1. - ss(.35, .9, rd.y));
-    let lit = mix(vec3f(1.15, .80, .78), vec3f(2.5, 1.4, .66), pow(max(mu * .5 + .5, 0.), 4.)) * (.75 + .5 * fbm(vec3f(r * 7., 2.), 2));
+    let lit = mix(vec3f(1.15, .80, .78), vec3f(2.5, 1.4, .66), pow(max(mu * .5 + .5, 0.), 4.)) * (.75 + .5 * fbm(vec3f(r * 7., 2.), 2)) * CLOUDK;
     c = mix(c, lit, cov_ * .45);
   }
-  c += SUNC * 9. * ss(.99988, .99994, mu);
+  c += mix(SUNC * 9., vec3f(2.4, 2.4, 2.2), NIGHT) * ss(mix(.99988, .99975, NIGHT), mix(.99994, .99982, NIGHT), mu);
+  // stars: one soft point per sky cell, a pixel or two wide, so they hold still as the camera moves
+  if (NIGHT > .5 && rd.y > 0.) {
+    let p = rd * 230.; let h = h33(floor(p)); let off = fract(p) - .5 - (h - .5) * .5;
+    c += vec3f(.85, .9, 1.) * step(.982, h.z) * ss(.14, .0, length(off)) * (.4 + 1.6 * h.x * h.x) * ss(.02, .2, rd.y) * 1.6;
+  }
   return fin(c);
 }
 `;
