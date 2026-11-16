@@ -45,3 +45,6 @@
   });
 }
 if (location.hash === '#capture') dynT = -Infinity;
+
+// test hook: read the camera state from a test script
+window.__F = F; window.__fly = () => fly;

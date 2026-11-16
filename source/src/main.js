@@ -413,6 +413,7 @@ function collide() {
   if (F[CY] <= fl) { F[CY] = fl; if (F[VY] < 0) F[VY] = 0; grounded = true; } else grounded = false;
 }
 
+let flyHold = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const dtr = now - F[LAST]; F[LAST] = now;
@@ -447,7 +448,9 @@ function frame(now) {
     const run = ks || tN > 1, mf = tId >= 0 ? 0.7 : kf - kb, mr = kr - kl, cp = cos(pitch), sy = sin(yaw), cw = cos(yaw);
     let vx, vy, vz;
     if (fly) {
-      const sp = run ? 70 : 20, k = 1 - exp(-dt * 3), mu = ku - kd;
+      // holding a direction builds speed over 3 s to 2.5 times, so short moves stay precise and long flights are quick
+      flyHold = mf || mr || ku || kd ? flyHold + dt : 0;
+      const sp = (run ? 110 : 32) * (1 + 1.5 * min(flyHold / 3, 1)), k = 1 - exp(-dt * 3), mu = ku - kd;
       vx = F[VX] + ((sy * cp * mf + cw * mr) * sp - F[VX]) * k; vy = F[VY] + ((sin(pitch) * mf + mu) * sp - F[VY]) * k; vz = F[VZ] + ((-cw * cp * mf + sy * mr) * sp - F[VZ]) * k;
     } else {
       const sp = run ? 8 : 3.2, k = 1 - exp(-dt * 7), l = hypot(mf, mr) || 1, f2 = mf / max(l, 1), r2 = mr / max(l, 1);
