@@ -1,8 +1,10 @@
 # Nabawi Courtyard
 
-### ▶ [Play it in your browser](https://moeymakes.github.io/masjid-nabawi-courtyard/)
-
-Chrome or Edge on a desktop or laptop (it needs WebGPU). Nothing to install.
+<p align="center">
+  <a href="https://moeymakes.github.io/masjid-nabawi-courtyard/"><img src=".github/play.svg" alt="Play it in your browser" width="420"></a>
+</p>
+<p align="center"><b><a href="https://moeymakes.github.io/masjid-nabawi-courtyard/">moeymakes.github.io/masjid-nabawi-courtyard/</a></b><br>
+<sub>Chrome or Edge on a desktop or laptop (needs WebGPU) · nothing to install · one HTML file</sub></p>
 
 **Walk the marble plaza of the Prophet's Mosque in Madinah just after sunrise, right in your browser, and watch
 the great umbrellas open.**
@@ -15,7 +17,7 @@ models, no sound files. The whole world is **one HTML file** of about 93 KB (38 
 The buildings are respectful approximations, not replicas, and the distances are composed so everything fits in
 a walk. There are no people in the scene, nothing inside the mosque is shown, and nothing is recited.
 
-![The plaza at sunrise before the umbrellas open: the facade, minarets and the Green Dome](.github/screenshots/plaza-at-sunrise.jpg)
+[![The plaza at sunrise before the umbrellas open: the facade, minarets and the Green Dome](.github/screenshots/plaza-at-sunrise.jpg)](https://moeymakes.github.io/masjid-nabawi-courtyard/)
 
 | | |
 |---|---|
