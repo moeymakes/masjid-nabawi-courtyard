@@ -52,7 +52,27 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
     3 times x 3 levels; menu-preview ok; index.html 113.6 kB.
   - SHIPPED stage 1: a7e3dd2 build, a71d2f5 README screenshots, pushed realism-s1:main (cc745f5). Live page
     byte-identical to the build (sha256 1495048a...), checked 2026-11-18 22:36 AEDT.
-  - Stopped 22:40 AEDT at 83% of the 5-hour window (stage 2 would cross 85%); resume armed for 01:07 AEDT.
+  - Stopped 22:40 AEDT at 83% of the 5-hour window (stage 2 would cross 85%); resumed 01:00 after the reset.
+- Realism stage 2 (branch realism-s2 from realism-s1; baseline = shipped stage 1: hero crop flatwhite .42 mean /
+  1.53 max, brightdetail 35.2). Helper scripts now live in verify/bin (the scratchpad was wiped by a restart).
+  - 1 2f014fc bounded GI (Madinah 8246d13 + 133f332): brightdetail 34.4, within capture noise.
+  - 2 b7a1cff umbrellas to SL Rasch's figures (see Geography): 24.5 m grid, chessboard heights 14.4 / 15.3 m,
+    overlapping into one canopy, bud 21.7 m, tan seams, 130 umbrellas; flight lanes and pose 1 moved off the new
+    column lines (flight clearance 3.8 m min, was 3.7). brightdetail 34.9.
+  - 3 72e9ba8 minarets: square balcony with parapet, octagonal then cylindrical, 104 m. brightdetail 35.0.
+  - 4 d0ba48e altocumulus (Madinah 02909b3) + palms (ac0180e). brightdetail 34.5.
+  - 5 stage-1 minors: night fill a stop lower, Green Dome night light falls off with height, warmer golden shade.
+  - Critic round 1 (stage 2): highest MAJOR - overhead clouds a blurry smudge. Strengths: the overlapping canopy
+    with alternating heights and seam tapes, night facade + lamp pools, Green Dome glow.
+  - 6 fix loop 1: clouds as crisp cells with a sunlit rim, field shifted off the pose-2 minaret, gentler dawn
+    lift, faint at night. Hero crop (verify/s2-9): flatwhite .50 mean / 1.79 max, clip .35 max, brightdetail
+    36.0 (stage 1 35.2, live-before-realism 15.4).
+  - Critic round 2: highest MINOR (in-scope and overall). Remaining minors: the lone pose-2 cloud is puff-like,
+    night floor still evenly lit far from lamps, golden aerial haze flattens the mid-ground, night aerial flat,
+    canopy shadow stairstep. Out of scope: city box grid and flat terrain (stage 3).
+  - Gates (verify/s2-g2-*): ALL PASS. clip max .35; flatwhite max 1.79; brightdetail 36.0 (holds vs stage 1 35.2);
+    critic minor; GPU 4.99 avg / 9.37 p99 ms; 0 console errors at 3 times x 3 levels; menu ok; index.html 116.5 kB.
+  - SHIPPED stage 2 (build + README screenshots), pushed realism-s2:main.
   - Next: stage 2 on branch realism-s2 (from main). Sources found so far for the umbrellas: SL Rasch project page
     (sl-rasch.com/en/projects/u-26-piazza): two deployed heights 14.4 / 15.3 m so the membranes overlap into one
     continuous canopy (no sky gaps), folded 21.7 m, 600 m2 shade each, opening 180 s, PTFE, columns clad in GFRC
@@ -121,8 +141,8 @@ Axes: +x east, -z north, y up, metres. Floor y = 0.
 
 | Feature | Real | Here |
 |---|---|---|
-| Piazza umbrellas | 250 (182 + 68 in the east square), 25.5 x 25.5 m open, about 14-15 m open height to the canopy, about 21 m closed; by SL Rasch, 2010 | 105 on a 27 m grid on the east plaza (three left out in front of the main gate), 26.6 m canopies (0.4 m gaps), hub 13.75 m, corners ~16 m open, bud ~21.5 m closed; open as a wave from the main gate, 20 s each |
-| Minarets | 10, about 104-105 m | 8 Saudi-era ones at ~100 m (4 on the east side, 4 framing the roof), plus an older-style minaret of ~64 m beside the Green Dome |
+| Piazza umbrellas | 250 (182 + 68 in the east square), 25.5 x 25.5 m open, two deployed heights 14.4 / 15.3 m so the membranes overlap into a continuous canopy, 21.7 m folded, 600 m2 shade each, opens in 180 s, tapes and seams in colour; by SL Rasch, 2010-11 | 130 on a 24.5 m grid (600 m2 each; three left out in front of the main gate), alternating heights in a chessboard (corners 14.4 / 15.3 m, hubs 12.2 / 13.1 m), 26.5 m canopies (1 m over the source so the overlap closes against the 0.9 m step), bud 21.7 m, tan seam tapes; open as a wave from the main gate, 20 s each (not 180 s: kept short for play) |
+| Minarets | 10, about 104-105 m; square first floor ending in a square balcony above the roof, then octagonal, then cylindrical stages with balconies; gilded bronze crescent ~6 m | 8 Saudi-era ones, 104 m to the crescent tip (4 on the east side, 4 framing the roof): square shaft and square balcony with parapet, octagonal stage, cylindrical stages, ~6 m alem; plus an older-style minaret of ~64 m beside the Green Dome |
 | Roof domes | 27 sliding domes, silver-grey, on square bases | 27 silver domes on square bases over the hall |
 | Green Dome | south-east corner of the old mosque, over the Prophet's chamber | rises above the roof 26 m inside the east facade near its south end; nothing below the roof is modelled |
 | Facade | pale granite cladding, arches of alternating black and white stone, gates with brass doors | pale ashlar, blind pointed arcades with brass lattice screens, black-and-white voussoirs, three gate portals with closed brass doors |
@@ -135,6 +155,16 @@ Sources checked 2026-11-15:
   closed 21.07 m; sources disagree, 20 m is also quoted)
 - Wikipedia, "Green Dome" (south-east corner of the mosque)
 - Wikipedia, "Prophet's Mosque" and madainproject.com "Masjid al-Nabawi" (10 minarets about 104-105 m, 27 sliding domes)
+- SL Rasch, "Madinah Piazza Shading Project" (sl-rasch.com/en/projects/u-26-piazza, checked 2026-11-19): heights
+  21.7 m folded, 14.4 or 15.3 m deployed, two heights so the membranes overlap, 600 m2 shade each, 180 s opening,
+  PTFE, GFRC column cladding with glass mosaic, coloured tapes and seams
+- Saudipedia, "The Minarets of the Prophet's Mosque"; madainproject.com "Minarets of Masjid al-Nabawi"; Zawya
+  "Minarets of Prophet's Mosque" (checked 2026-11-19): ~104 m, square first floor ending in a square balcony,
+  octagonal then cylindrical stages, gilded bronze crescent ~6 m and ~4.5 t
+- Al Riyadh Daily (SPA), Thassos marble in the courtyards of the Prophet's Mosque (heat-reflecting white Greek
+  marble, 117,000 m2); the floor stays the composed white marble with grey bands and sand pinstripes
+- madainproject.com "Green Dome": Ottoman dome of 1818, painted green from 1837; no published dimensions found,
+  so its composed size stays
 - Saudipedia, "The Second Saudi Expansion of the Prophet's Mosque" (courtyards in marble and granite in geometric
   designs, gates); globalsecurity.org "Madinah and the Prophet's Mosque" (pink granite cladding, arches in black
   and white stone, white marble columns with brass capitals)
