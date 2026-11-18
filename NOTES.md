@@ -72,7 +72,27 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
     canopy shadow stairstep. Out of scope: city box grid and flat terrain (stage 3).
   - Gates (verify/s2-g2-*): ALL PASS. clip max .35; flatwhite max 1.79; brightdetail 36.0 (holds vs stage 1 35.2);
     critic minor; GPU 4.99 avg / 9.37 p99 ms; 0 console errors at 3 times x 3 levels; menu ok; index.html 116.5 kB.
-  - SHIPPED stage 2 (build + README screenshots), pushed realism-s2:main.
+  - SHIPPED stage 2 (build + README screenshots), pushed realism-s2:main. Live byte-identical (sha256 2e0566c2...), checked
+    2026-11-19 ~03:30 AEDT.
+  - Correction: a repeat capture of one build (s3-3 vs s3-3b) differs by 0.1% on the mean brightdetail (0.6% mean
+    absolute per shot), so the -2% after the GI port was a real small drop, not noise; stage 2 still ended above
+    stage 1 (36.0 vs 35.2).
+- Realism stage 3 (branch realism-s3 from realism-s2; baseline = live stage 2, hero crop brightdetail 36.0).
+  - Data: reused the Madinah session's approved downloads (Copernicus GLO-30 N24_E039 tile and the Overpass extract
+    within 1.5 km of the Haram, /home/moey/Dev/research/madinah-horizon-data/), same location; no new download.
+  - OSM city tried (port of Madinah a692b24, Haram centre at MOSQ (-210, -5), features on the composed plaza left
+    out): s3-1 bd 34.0 (-5.5%), fix loop 1 blocks moved to the kerb instead of dropped 34.7, fix loop 2 pale
+    sidewalks 34.7. Isolation: DEM only holds (dawn pose 6 83.3 vs 82.4); streets without hotel towers cost 11% on
+    dawn pose 6; with towers 22% at dawn (long low-sun shadows) but +12% at night. Dropped, as Madinah did:
+    the real street ring and hotel towers make the area round the Haram plainer than the composed grid in every
+    aerial shot. No OSM data ships, so no ODbL attribution is needed; Copernicus credit goes in the README.
+  - 1 5c93773 DEM relief for Uhud and Jabal Ayr (Madinah 3551cdb), committed WITHOUT a capture of this exact tree
+    (the s3-dem capture had the OSM code switched off, equivalent but not identical).
+  - STOPPED 2026-11-19 ~04:40 AEDT at 86% of the 5-hour window; one-shot resume armed for 06:07 AEDT.
+    Next: capture s3 (verify/bin/cap.sh s3-4 + met.sh), gates (verify/bin/gates.sh s3-g1), critic once, README
+    data-source line for Copernicus, ship realism-s3:main; then the contact sheet
+    (/home/moey/Dev/reports/masjid-nabawi-courtyard-realism-2026-11-19.jpg: live-before s0-base vs final), worldsmith
+    learnings (references/realism.md + SKILL.md log, append only), final report.
   - Next: stage 2 on branch realism-s2 (from main). Sources found so far for the umbrellas: SL Rasch project page
     (sl-rasch.com/en/projects/u-26-piazza): two deployed heights 14.4 / 15.3 m so the membranes overlap into one
     continuous canopy (no sky gaps), folded 21.7 m, 600 m2 shade each, opening 180 s, PTFE, columns clad in GFRC
