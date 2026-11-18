@@ -498,12 +498,27 @@ fn marble(p: vec2f, fw: f32, vein: f32) -> vec4f {
   return mix(vec4f(pave * (1. - .3 * max(cov(1.2 - abs(fract(p.x / 2.4) - .5) * 2.4, .01, fw), cov(1.2 - abs(fract(p.y / 2.4) - .5) * 2.4, .01, fw))), .1), vec4f(col, mix(.9, .75, max(border, ring))), inPlaza);
 }
 // what the polished floor mirrors: the lit east facade, the undersides of the open canopies, otherwise the sky
+// night: the plaza lamp posts (two lanes between the columns, globes at 8.6 m) as point lights, so the floor gets
+// warm pools under each post instead of an even wash; and ground floodlights every 12 m along the facade
+fn nightLights(p: vec3f, N: vec3f) -> vec3f {
+  var e = vec3f(0.);
+  let lz = clamp(round((p.z - UZ0) / USP - .5), 0., UNZ - 2.) * USP + UZ0 + .5 * USP;
+  for (var k = 0; k < 2; k++) {
+    let lx = UX0 + select(1.5, 4.5, k == 1) * USP;
+    let d = vec3f(lx, 8.6, lz) - p; let r2 = dot(d, d);
+    e += vec3f(1., .72, .42) * 60. * sat(dot(N, d) * inverseSqrt(r2)) / (r2 + 4.) * ss(22., 12., length(d.xz));
+  }
+  let fz = MZ0 + 12. * (floor((p.z - MZ0) / 12.) + .5);
+  let fd = vec3f(FAC + 2.5, .3, fz) - p; let f2 = dot(fd, fd);
+  e += vec3f(1., .78, .52) * 16. * sat(dot(N, fd) * inverseSqrt(f2)) / (f2 + 1.) * ss(FAC + 8., FAC + 1., p.x) * step(MZ0, p.z) * step(p.z, MZ1);
+  return e;
+}
 fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   var col = mix(skyCol(R, g.sun.xyz), vec3f(.72, .66, .64), .3); var tm = 1e9;
   if (R.x < -1e-3) {
     let t = (FAC + .3 - p.x) / R.x; let q = p + R * t;
     let k = ss(ROOF + 3., ROOF - 4., q.y) * ss(MZ0 - 15., MZ0 + 15., q.z) * ss(MZ1 + 15., MZ1 - 15., q.z) * ss(260., 60., t);
-    col = mix(col, vec3f(.80, .74, .64) * (SUNC * .5 + vec3f(.35, .34, .36)), k);
+    col = mix(col, vec3f(.80, .74, .64) * (SUNC * .5 + vec3f(.35, .34, .36) * mix(1., .3, NIGHT)), k);
     if (k > .5) { tm = t; }
   }
   if (R.y > 1e-3) {
@@ -511,7 +526,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
     if (t < tm) {
       let q = p + R * t; let u = uCell(q.xz);
       let k = uOpen(g.mis.w, uDelay(u.zw)) * (1. - ss(10.5, 13.5, max(abs(u.x), abs(u.y)))) * ss(200., 40., t);
-      col = mix(col, vec3f(.95, .84, .70) * .9, k);
+      col = mix(col, vec3f(.95, .84, .70) * mix(.9, .3, NIGHT), k);
     }
   }
   return col;
@@ -688,11 +703,13 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   let ndl = sat(dot(N, L));
   let uc = uCell(i.wp.xz);
   let under = uOpen(g.mis.w, uDelay(uc.zw)) * (1. - ss(11., 14., max(abs(uc.x), abs(uc.y)))) * ss(15.5, 12., i.wp.y) * f32(!far);
-  let am = (amb(N, so) + (AMBC * vec3f(.95, .86, .74) * .42 + vec3f(1., .78, .5) * .3 * NIGHT) * under * sat(N.y * .5 + .6)) * ao;
+  let am = (amb(N, so) + (AMBC * vec3f(.95, .86, .74) * .42 + vec3f(1., .78, .5) * .15 * NIGHT) * under * sat(N.y * .5 + .6)) * ao;
   var c = alb * (E * ndl + am) + emi;
+  if (NIGHT > .5 && !far) { c += alb * nightLights(i.wp, N) * vao; }
   let Hh = normalize(V + L);
   let spc = mix(vec3f(.04), alb, metal);
-  c += E * spc * pow(sat(dot(N, Hh)), mix(8., 160., gloss)) * gloss * ndl * 4.;
+  // polished marble gets a tight sun streak, not a broad sheen smeared toward a low sun
+  c += E * spc * pow(sat(dot(N, Hh)), select(mix(8., 160., gloss), 900., mat == 19)) * gloss * ndl * select(4., 6., mat == 19);
   var ambS = alb * am;
   if (mat == 19) {
     // polished marble: a Fresnel mirror of the facade, the canopies and the sky, plus the sun's glint
@@ -754,11 +771,11 @@ fn mem(a: f32, s: f32, e: f32, sd: f32) -> vec3f {
   let sunSide = select(-1., 1., dot(ng, L) > 0.);
   let Es = SUNC * shadow9(i.wp + ng * sunSide * .4);
   let ndl = abs(dot(ng, L));
-  let lit = select(.55, 1., select(-1., 1., top) == sunSide);
+  let lit = select(.3, 1., select(-1., 1., top) == sunSide);
   let so = skyOcc(i.wp + n * 1.5);
   var alb = vec3f(.78, .77, .745) * (1. - .2 * seam) * (.97 + .06 * h2(vec2f(floor(a / TAU * 32.), i.k.y * 91.)));
   // light bounced up from the marble: it follows the sun and sky, so at night only the floodlit floor feeds it
-  let bounce = vec3f(.98, .86, .70) * .5 * mix(1., .3, NIGHT) * sat(-n.y) * mix(.6, 1., e);
+  let bounce = vec3f(.98, .86, .70) * .4 * mix(1., .3, NIGHT) * sat(-n.y) * mix(.6, 1., e);
   var c = alb * (Es * ndl * lit + amb(n, so) + bounce);
   c += Es * pow(sat(dot(n, normalize(V + L))), 40.) * .08 * f32(top);
   c = mix(c, vec3f(.55, .55, .56) * (amb(n, so) + bounce * .6), arm);
