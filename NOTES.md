@@ -123,7 +123,8 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
     verify/s3-9-t0.
   - SHIPPED stage 3 by Moey's decision (2026-11-19, relayed by the starting session: "Nabawi stage 3"), as built
     with the in-scope night-window major (#6) still open. README screenshots from verify/s3-9-t0, pushed
-    realism-s3:main as a fast-forward. The next fix for #6 below is the first job of any further realism work.
+    realism-s3:main as a fast-forward (b53c87e). Live byte-identical to the build (sha256 0f042459...), checked
+    2026-11-20 08:41 AEDT. The next fix for #6 below is the first job of any further realism work.
   - Next fix for #6 (not started): in the city-window emission (shaders.js, mat 17), vary light per building and
     per floor instead of per window: take the dim level and the warm/cool choice from `hs(sd)` (building) and
     `hs(flr + sd)` (floor), keep per-window only the binary lit/unlit; keep the 1.0x ceiling (night aerial clip).
