@@ -562,7 +562,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   let flt = ss(.7, .92, n0.y);
   // facade coordinates for building materials: along the wall and up it
   let fu = select(i.op.z, i.op.x, abs(on.z) > abs(on.x)); let fv = i.op.y; let wall = 1. - ss(.45, .7, abs(on.y));
-  let wfade = 1. - ss(.25, .6, fwidth(fu / 3.4) + fwidth(fv / 3.3));
+  let fwu = fwidth(fu); let fwv = fwidth(fv / 3.3);
   if (mat <= 1) {
     let lava = fm.r; let gran = fm.g; let city = fm.b;
     alb = mix(vec3f(.52, .36, .22), vec3f(.64, .47, .30), sat(A.c * .9 + Lg.a * .9 - .55)) * (.7 + .45 * mix(B.h, Lg.b, .45)) * (.84 + .32 * C.c);
@@ -580,11 +580,19 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
     if (mat == 17) {
       let bw = mix(2.6, 4.6, hs(sd * 11.)); let ww = mix(.18, .34, hs(sd * 13.));
       let wx = fract(fu / bw); let wy = fract(fv / 3.3); let flr = floor(fv / 3.3); let bay = floor(fu / bw);
-      let win = step(.5 - ww, wx) * step(wx, .5 + ww) * step(.3, wy) * step(wy, .74) * step(1., flr) * wall * step(fv, i.m.w - 1.) * wfade * step(.15, hs(bay * 3.1 + flr * 5.7 + sd));
-      let lit = step(LITF, hs(flr * 13.1 + bay * 7.7 + sd * 31.));
+      // box-filtered per axis instead of faded out: a window column under ~3 px becomes its average share, and so does
+      // a floor, so a far tower keeps its floor ribbons rather than turning into a blank wall
+      let au = ss(.25, .6, fwu / bw); let av = ss(.25, .6, fwv);
+      let wxs = mix(step(.5 - ww, wx) * step(wx, .5 + ww), 2. * ww, au);
+      let wys = mix(step(.3, wy) * step(wy, .74), .44, av);
+      let win = wxs * wys * step(1., flr) * wall * step(fv, i.m.w - 1.) * mix(step(.15, hs(bay * 3.1 + flr * 5.7 + sd)), .85, au);
+      let lit = mix(step(LITF, hs(flr * 13.1 + bay * 7.7 + sd * 31.)), 1. - LITF, max(au, av));
       alb = mix(alb, vec3f(.07, .08, .09), win * .9);
-      alb = mix(alb, alb * vec3f(.82, .8, .78), (1. - wfade) * wall * .5);
-      emi = vec3f(1., .62, .30) * .5 * win * lit * LIGHTS;
+      // rooms differ: about a quarter cool white, the rest warm, many dimmed behind curtains (never brighter than full,
+      // so the night aerial's hotel ring does not clip)
+      let rv = hs(flr * 7.3 + bay * 3.9 + sd * 17.); let aw = max(au, av);
+      let rc = mix(mix(vec3f(1., .62, .30), vec3f(.82, .82, .76), step(.72, rv)), vec3f(.95, .68, .42), aw);
+      emi = rc * .5 * win * lit * mix(mix(.4, 1., fract(rv * 7.)), .7, aw) * LIGHTS;
       alb = mix(alb, alb * vec3f(.5, .47, .45), ss(.6, .9, on.y));
       gloss = mix(.08, .55, win);
     } else {
