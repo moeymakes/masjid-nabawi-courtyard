@@ -240,7 +240,8 @@ function meshBird() {
 }
 // city block sizes (w, h, d, setback storey); the last three are the taller hotels
 const CITY = [[27, 6.6, 28, 0], [28, 9.9, 26, 0], [24, 9.9, 27, 1], [28, 13.2, 28, 0], [26, 6.6, 27, 1], [20, 9.9, 28, 0], [28, 19.8, 28, 1], [29, 26.4, 29, 0], [26, 33, 26, 1], [22, 6.6, 24, 1],
-  [18, 16.5, 22, 1], [30, 13.2, 18, 0], [16, 23.1, 16, 0], [24, 4.4, 30, 0], [34, 9.9, 20, 1], [20, 39.6, 22, 1], [22, 49.5, 24, 1], [14, 8.8, 26, 0]];
+  [18, 16.5, 22, 1], [30, 13.2, 18, 0], [16, 23.1, 16, 0], [24, 4.4, 30, 0], [34, 9.9, 20, 1], [20, 39.6, 22, 1], [22, 49.5, 24, 1], [14, 8.8, 26, 0],
+  [24, 62.7, 26, 1], [22, 56.1, 24, 1]];
 const CITY_LOW = [0, 1, 2, 3, 4, 5, 9, 10, 11, 13, 14, 17, 3, 1];
 
 // ---------------------------------------------------------------- materials (W_SOLID fs)
@@ -478,10 +479,13 @@ function makeWorld(FAR, flyPts) {
     for (let j = 0; j < 6; j++) grass(x + rr(-.14, .14), .3, z + rr(-.14, .14), rr(.22, .5), yw + j * 1.05, rr(.1, .8), rr(.02, .04), 0, 2, rnd(), rnd(), rr(.3, .8));
   }
 
-  // --- the city beyond: hotels east and north, low houses elsewhere (the far ground model's city mask)
+  // --- the city beyond: hotels around the mosque, low houses elsewhere (the far ground model's city mask)
   rseed(5);
   const cityIds = CITY.map((d) => add(meshCityBox(...d)));
   for (let dz = -3240; dz < 3240; dz += 360) for (let dx = -3240; dx < 3240; dx += 360) {
+    // a stream per block: the mask decides how many draws a block takes, so one shared stream let a terrain edit
+    // 3 km away reshuffle every block after it
+    rseed(1000 + (dz + 3240) / 360 * 18 + (dx + 3240) / 360);
     const near = hypot(dx + 120, dz) < 800, ang = near ? rr(-.03, .03) : rr(-.55, .55), ca = cos(ang), sa = sin(ang);
     const sx = 5 + (rnd() * 3 | 0), sz = 5 + (rnd() * 3 | 0), lane = rnd() * 12 | 0;
     for (let j = 0; j < 12; j++) for (let i = 0; i < 12; i++) {
@@ -491,7 +495,9 @@ function makeWorld(FAR, flyPts) {
       if (x > -460 && x < 158 && abs(z) < 395) continue;
       const dm = hypot(x + 120, z * 1.1);
       let t = CITY_LOW[(rnd() * CITY_LOW.length) | 0];
-      if (dm < 750 && (x > 175 || z < -395) && rnd() < .6) t = [6, 7, 8, 12, 15, 16, 10][(rnd() * 7) | 0];
+      // the Markazia: hotel towers ring the mosque on every side, nearly unbroken within ~500 m
+      // (15-20 storeys on the first streets, falling to 6-12 by ~750 m)
+      if (dm < 750 && rnd() < (dm < 520 ? .85 : .6)) t = (dm < 400 ? [8, 15, 16, 18, 19, 16, 18] : [6, 7, 8, 12, 15, 16, 10])[(rnd() * 7) | 0];
       const sc = rr(.82, 1.04), yaw = -ang + (rnd() < .5 ? 0 : PI / 2) + rr(-.025, .025);
       solid(cityIds[t], x, fh(x, z) - .5, z, sc, yawQ(yaw), 17, rnd(), 0, CITY[t][1] * sc);
     }
