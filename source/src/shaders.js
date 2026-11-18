@@ -691,7 +691,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   // night: the Masjid is floodlit, its domes and finials glow, the umbrella fabric is lit from inside
   if (NIGHT > .5) {
     var k = 0.;
-    if (mat == 25 || mat == 20 || mat == 7) { k = mix(.12, .04, ss(0., 14., i.wp.y)); } else if (mat == 8 || mat == 10) { k = 1.5; } else if (mat == 9) { k = .35; } else if (mat == 11) { k = .3; } else if (mat == 19) { k = .03; }
+    if (mat == 25 || mat == 20 || mat == 7) { k = mix(.08, .025, ss(0., 14., i.wp.y)); } else if (mat == 8) { k = mix(1.1, .3, ss(0., 16., i.op.y)); } else if (mat == 10) { k = 1.5; } else if (mat == 9) { k = .35; } else if (mat == 11) { k = .3; } else if (mat == 19) { k = .03; }
     emi += alb * k;
   }
   let N = normalize(qrot(i.q, normalize(on + (A.n * .8 + B.n * .6 + C.n * .4 * ss(70., 10., dist)) * bump)));
