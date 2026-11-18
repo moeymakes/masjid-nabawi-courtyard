@@ -50,7 +50,18 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
   - Gates on 8776fa8 (verify/s1-g4-*): ALL PASS. clip max .46 < .5; flatwhite max 1.53 < 2; brightdetail 35.2 vs
     15.4 (+128%, gate +15%); critic minor; GPU 4.41 avg / 8.17 p99 ms (gate 11 / 16); 0 console errors at
     3 times x 3 levels; menu-preview ok; index.html 113.6 kB.
-  - SHIPPED stage 1: a7e3dd2 build, a71d2f5 README screenshots, pushed realism-s1:main.
+  - SHIPPED stage 1: a7e3dd2 build, a71d2f5 README screenshots, pushed realism-s1:main (cc745f5). Live page
+    byte-identical to the build (sha256 1495048a...), checked 2026-11-18 22:36 AEDT.
+  - Stopped 22:40 AEDT at 83% of the 5-hour window (stage 2 would cross 85%); resume armed for 01:07 AEDT.
+  - Next: stage 2 on branch realism-s2 (from main). Sources found so far for the umbrellas: SL Rasch project page
+    (sl-rasch.com/en/projects/u-26-piazza): two deployed heights 14.4 / 15.3 m so the membranes overlap into one
+    continuous canopy (no sky gaps), folded 21.7 m, 600 m2 shade each, opening 180 s, PTFE, columns clad in GFRC
+    panels with glass mosaic, seams and tapes in colour. Minarets (Saudipedia, madainproject): ~104 m, square
+    first floor ending in a square balcony above the roof, then octagonal, then cylindrical, gilded bronze
+    crescent ~6 m / 4.5 t. Paving: Thassos white marble (SPA via Al Riyadh Daily). Green Dome: Ottoman 1818,
+    green since 1837; no published dimensions found, keep the composed size. Port from Madinah: GI 8246d13 +
+    133f332, clouds 02909b3, palms ac0180e. Then stage-1 minors (night fill a stop lower, Green Dome emission
+    shading, golden pose-5 facade warmth). Stage 3: Madinah 3551cdb (DEM) / a692b24 (OSM) / bcad486 (README).
   - Critic: one per stage, not one per feature (5-hour usage window was at 71% with six sessions sharing it).
 
 - Phase: 7 (delivered). Critic loop stopped by the brief's rule: 6 critic iterations (iter-02 .. iter-07), highest
