@@ -169,16 +169,25 @@ function merlons(m, x0, z0, x1, z1, y, sp = 1.5) {
     }
   }
 }
-// Saudi-era minaret: square shaft to above the roof, three octagonal stages on corbelled balconies, a lantern, a cap
+// Saudi-era minaret (Saudipedia, madainproject): a square first floor ending in a square balcony above the roof, an
+// octagonal stage, then cylindrical stages on corbelled balconies, a lantern, a cap; ~104 m to the crescent tip
 const MINARET_N = [[3.3, 22], [3.3, 34.6], [3.55, 34.8], [3.55, 35.5], [3.3, 35.7], [3.3, 48.4], [4.5, 50.4], [4.5, 52.2], [3, 52.5], [3, 59.2], [3.22, 59.4], [3.22, 60], [3, 60.2], [3, 66.6], [4.1, 68.4], [4.1, 70.2], [2.5, 70.5], [2.5, 74.4], [2.7, 74.6], [2.7, 75.1], [2.5, 75.3], [2.5, 78.8], [3.5, 80.4], [3.5, 81.9], [2.1, 82.2], [2.1, 86], [2.4, 86.2], [2.25, 87.8], [1.3, 89.8], [.3, 91.3], [0, 91.5]];
 const MINARET_O = [[2.6, 19], [2.6, 39.6], [3.4, 41.4], [3.4, 42.6], [2.2, 42.9], [2.2, 51.6], [2.9, 53], [2.9, 54], [1.8, 54.3], [1.8, 58], [2.1, 59], [2.15, 60.4], [1.7, 62.2], [.9, 63.6], [.15, 64.4], [0, 64.5]];
-const MK = 1.09;
-function meshMinaret(prof, base, baseH, k = 1) {
+const MK = 1.07;
+function meshMinaret(prof, base, baseH, k = 1, sqBal = false) {
   const m = new Mesh();
   box(m, -base * .6, 0, -base * .6, base * .6, 1.6, base * .6, .8);
   box(m, -base / 2, 1.6, -base / 2, base / 2, baseH, base / 2);
-  box(m, -base / 2 - .25, baseH - 1.2, -base / 2 - .25, base / 2 + .25, baseH - .5, base / 2 + .25);
-  lathe(m, prof.map(([r, h]) => [r * k, h * k]), 8);
+  // square balcony: corbelled slab and a parapet
+  const b = base / 2 + .9;
+  if (sqBal) {
+    box(m, -base / 2 - .3, baseH - 1.6, -base / 2 - .3, base / 2 + .3, baseH - 1, base / 2 + .3);
+    box(m, -b, baseH - 1, -b, b, baseH - .6, b);
+    for (const [x0, z0, x1, z1] of [[-b, -b, b, -b + .2], [-b, b - .2, b, b], [-b, -b, -b + .2, b], [b - .2, -b, b, b]]) box(m, x0, baseH - .6, z0, x1, baseH + .5, z1);
+  } else box(m, -base / 2 - .25, baseH - 1.2, -base / 2 - .25, base / 2 + .25, baseH - .5, base / 2 + .25);
+  // octagonal up to the first round balcony, cylindrical above it
+  const pk = prof.map(([r, h]) => [r * k, h * k]), cut = prof.findIndex(([r], i) => i > 0 && r < prof[i - 1][0] - .6) + 1 || 1;
+  lathe(m, pk.slice(0, cut), 8); lathe(m, pk.slice(cut - 1), 24);
   // round balconies over the octagonal ones: corbel, floor and a parapet with a lip
   for (let i = 1; i < prof.length - 1; i++) if (prof[i][0] > prof[i - 1][0] + .6) {
     const r0 = prof[i - 1][0] * k, r1 = prof[i][0] * k * 1.03, y0 = prof[i - 1][1] * k, y1 = prof[i][1] * k, y2 = prof[i + 1][1] * k;
@@ -354,7 +363,7 @@ function makeWorld(FAR, flyPts) {
   solid(fin, GREEN[0], ROOF + 3 + 5 + 4.8 + .35 + 11 * 1.18 - .5, GREEN[1], 2.3, Q0, 10, 0);
   for (let i = 0; i < GATEDOME.length; i += 3) solid(fin, GATEDOME[i], GATEDOME[i + 1] - .2, GATEDOME[i + 2], .8, Q0, 10, 0);
   // minarets
-  const mN = add(meshMinaret(MINARET_N, 9, 24, MK)), mO = add(meshMinaret(MINARET_O, 6, ROOF + 1, 1));
+  const mN = add(meshMinaret(MINARET_N, 9, 24, MK, true)), mO = add(meshMinaret(MINARET_O, 6, ROOF + 1, 1));
   for (const [x, z] of MINS) {
     solid(mN, x, 0, z, 1, yawQ(PI / 8), 20, 0, 0, 1);
     solid(fin, x, 91.3 * MK, z, 1.8, Q0, 10, 0);
