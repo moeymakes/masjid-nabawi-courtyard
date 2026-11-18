@@ -93,6 +93,35 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
     data-source line for Copernicus, ship realism-s3:main; then the contact sheet
     (/home/moey/Dev/reports/masjid-nabawi-courtyard-realism-2026-11-19.jpg: live-before s0-base vs final), worldsmith
     learnings (references/realism.md + SKILL.md log, append only), final report.
+  - Resumed 2026-11-19 06:05 AEDT (4% of the window). s3-4 (5c93773 as committed): bd 35.34 vs stage 2's 35.98
+    re-measured (-1.8%), all from two shots: the hotel behind the pose-4 arches and the night skyline in pose 3.
+    Cause: the DEM's real Uhud spurs reach z ~ -2500, inside the city loop, and the city mask gates `rnd()` calls,
+    so every later block reshuffled. Stage 2's layout cannot come back without building on the mountain.
+  - Fix loop 1, s3-5: a random stream per 360 m city block. bd 35.74 (-0.7%; a new draw of the same city).
+  - Fix loop 2, s3-6: the Markazia ring on all four sides (was east and north only; the south side's Dar Al Hijra,
+    Movenpick and Hilton are there too), 85% hotels within ~520 m. bd 38.55 (+7%) but dawn aerial 82.4 -> 69.6:
+    tall towers with blank sunlit faces replaced many small shadowed roofs (the OSM trial's signature).
+  - Fix loop 3, s3-7: far window grids box-filtered per axis instead of faded out (the fade blanked every tower
+    beyond ~6 px per floor). bd 44.05 (+22%), dawn aerial 83.4. Gates s3-g1: GPU 5.54 / 10.48 ms, 0 errors,
+    menu ok, 131.4 kB. Critic round 1 (s3-7): major; in scope: hotel ring not distinct (no height falloff), night
+    windows uniform sticker grids. Out of scope: roof slab, canopy fabric, pose-2 cloud, night canopy.
+  - Fix loop 4, s3-8/s3-9: 17- and 19-storey hotels (56.1 / 62.7 m; real Markazia hotels are 15-20 storeys) on
+    the first 400 m, falling to 6-12 storeys by 750 m; rooms warm or cool white and dimmed behind curtains. s3-8
+    had rooms up to 1.55x and night aerial clip .553 (gate .5), corrected within the loop to dim-only 0.4-1.0x.
+  - Final tree e1c0797 + ded8738 (s3-9): bd 43.27 vs 35.98 (+20%), clip max .27, flatwhite max 1.78; three shots
+    dip 1.6-2.5% (city layout behind arches). Gates s3-g2: PASS GPU 5.46 avg / 10.20 p99 ms, PASS 0 console
+    errors at 3 times x 3 levels, PASS menu-preview, PASS 131.9 kB (DEM patches +15 kB).
+  - Critic round 2 (s3-9): highest MAJOR. In stage 3 scope: #6 night-aerial windows read as dense near-uniform
+    dots with no building-level variation, predicted to shimmer in motion (judged from stills; the per-window
+    dimming of loop 4 is part of it). Out of scope (stages 1-2 subjects): dawn/golden mood too similar, umbrellas
+    lose rib structure from the air, night canopy gloom and navy gaps, blocky artefacts in canopy gaps (t1 pose 3),
+    pose-2 cloud, minaret ring glow, roof tone. City monotony dropped from major to minor.
+  - Ship rule NOT met: the fix-loop cap (4) is spent and one remaining major is in scope. Not shipped; branch
+    realism-s3 pushed with the build. Asked the starting session whether to ship anyway.
+    If shipping: `git push origin realism-s3:main`, poll live until byte-identical, README screenshots from
+    verify/s3-9-t0. If not: the next lever is #6, light variation per building/floor instead of per window.
+  - Contact sheet /home/moey/Dev/reports/masjid-nabawi-courtyard-realism-2026-11-19.jpg (rows: dawn, golden,
+    night; each original live build s0-base above the stage 3 candidate s3-9). Worldsmith learnings appended.
   - Next: stage 2 on branch realism-s2 (from main). Sources found so far for the umbrellas: SL Rasch project page
     (sl-rasch.com/en/projects/u-26-piazza): two deployed heights 14.4 / 15.3 m so the membranes overlap into one
     continuous canopy (no sky gaps), folded 21.7 m, 600 m2 shade each, opening 180 s, PTFE, columns clad in GFRC

@@ -100,6 +100,7 @@ cd source && npm install && npm run build
 | [`source/src/main.js`](source/src/main.js) | Renderer, the umbrella clock, walking and flying, collision, controls |
 | [`source/src/audio.js`](source/src/audio.js) | The soundscape |
 | [`source/src/quality.js`](source/src/quality.js) | Detail levels |
+| [`source/src/data.js`](source/src/data.js) | Packed elevation patches for Mount Uhud and Jabal Ayr |
 | [`source/template.html`](source/template.html) | The page: loading bar, menu, controls list |
 
 `npm run build:dev` writes `dev.html` with a scripted one-minute flight (`P`) and a benchmark (`B`).
@@ -108,6 +109,14 @@ cd source && npm install && npm run build
 
 - **[Madinah Horizon](https://moeymakes.github.io/madinah-horizon/)**: the date gardens, lava fields and hills around Madinah at golden hour, with the Prophet's Mosque and Uhud on the horizon ([source](https://github.com/moeymakes/madinah-horizon))
 - **[Madinah, First Years](https://moeymakes.github.io/madinah-first-years/)**: the oasis and the first mosque around 622-632 CE, an artistic reconstruction ([source](https://github.com/moeymakes/madinah-first-years))
+
+## Data sources
+
+The relief of Mount Uhud and Jabal Ayr on the horizon comes from real elevation data, packed into the page by
+`source/tools/pack-data.py` and placed in the world's composed (not to scale) geography:
+
+- Elevation: Copernicus GLO-30 Digital Elevation Model, (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space
+  GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA; all rights reserved.
 
 ## License
 
