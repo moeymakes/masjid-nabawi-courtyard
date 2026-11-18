@@ -103,7 +103,7 @@ const ibMote = { arrayStride: 16, stepMode: 'instance', attributes: [A(0, 0, 'fl
 
 const scenePipe = (m, vsE, fsE, buffers, o = {}) => device.createRenderPipeline({ layout: pl0,
   vertex: { module: m, entryPoint: vsE, buffers, constants: o.constants },
-  fragment: { module: m, entryPoint: fsE, targets: [{ format: HDR, blend: o.blend }, { format: 'r8unorm', writeMask: o.noA ? 0 : 15 }] },
+  fragment: { module: m, entryPoint: fsE, targets: [{ format: HDR, blend: o.blend }, { format: 'rgba8unorm', writeMask: o.noA ? 0 : 15 }] },
   primitive: { topology: o.strip ? 'triangle-strip' : 'triangle-list', cullMode: o.cull || 'none' },
   depthStencil: { format: DEPTH, depthWriteEnabled: !o.blend, depthCompare: 'greater' }, multisample: { count: AA, alphaToCoverageEnabled: !!o.a2c && AA > 1 } });
 const shadowPipe = (m, vsE, buffers, o = {}) => device.createRenderPipeline({ layout: pl0,
@@ -132,8 +132,8 @@ const pRays = device.createRenderPipeline({ layout: 'auto', vertex: { module: mR
 const pPost = device.createRenderPipeline({ layout: 'auto', vertex: { module: mPost, entryPoint: 'vs' }, fragment: { module: mPost, entryPoint: 'fs', targets: [{ format: FMT }] } });
 // GTAO + TAA on High and Medium; Low keeps the plain resolve
 const TAA = LV < 2;
-const fsPipe = (code, format) => { const m = mod(code); return device.createRenderPipeline({ layout: 'auto', vertex: { module: m, entryPoint: 'vs' }, fragment: { module: m, entryPoint: 'fs', targets: [{ format }] } }); };
-const pAO = TAA && fsPipe(W_AO, 'rg16float'), pAOB = TAA && fsPipe(W_AOB, 'rg16float'), pTAA = TAA && fsPipe(W_TAA, HDR);
+const fsPipe = (code, ...fmts) => { const m = mod(code); return device.createRenderPipeline({ layout: 'auto', vertex: { module: m, entryPoint: 'vs' }, fragment: { module: m, entryPoint: 'fs', targets: fmts.map((format) => ({ format })) } }); };
+const pAO = TAA && fsPipe(W_AO, 'rg16float', HDR), pAOB = TAA && fsPipe(W_AOB, 'rg16float', HDR), pTAA = TAA && fsPipe(W_TAA, HDR);
 // 8-phase Halton(2,3) sub-pixel jitter
 const JIT = [];
 for (let i = 1; i <= 8; i++) { const h = (b) => { let f = 1, r = 0, n = i; while (n) { f /= b; r += f * (n % b); n = floor(n / b); } return r; }; JIT.push(h(2) - 0.5, h(3) - 0.5); }
@@ -267,7 +267,7 @@ Wd.fmap = 0;
 // ---------------------------------------------------------------- render targets (rebuilt on resize)
 const PIXMAX = 2560 * 1440, PIXMIN = mob ? 25e4 : 5e5, DETMIN = 0.4;
 let Wpx = 0, Hpx = 0, DW = 0, DH = 0, pix = +SV[1] || (LV > 1 ? 41e4 : mob ? 1280 * 720 : PIXMAX), det = +SV[2] || 1, dynN = 0, dynT = 0, dynG = 0, dynGN = 0, dynBad = 0, dynOk = 0, dynWait = 3;
-let passScene, passRays, passBlur, bgBlur, passPost, bgRays, bgPost, bloomPass = [], bloomBG = [], targets = [], passAO, passAOB, bgAO, bgAOB, passTAA = [], bgTAA = [], bgPostT = [], bloomBG0 = [];
+let passScene, passRays, passBlur, bgBlur, passPost, bgRays, bgPost, bloomPass = [], bloomBG = [], targets = [], passAO, passAOB, bgAO = [], bgAOB, passTAA = [], bgTAA = [], bgPostT = [], bloomBG0 = [];
 const NB = 6;
 function resize() {
   DW = max(2, round(canvas.clientWidth * devicePixelRatio)); DH = max(2, round(canvas.clientHeight * devicePixelRatio));
@@ -280,7 +280,7 @@ function resize() {
   for (const t of targets) t.destroy();
   const tMS = tex(AA > 1 ? Wpx : 1, Hpx, HDR, TU.RENDER_ATTACHMENT, { samples: AA }), tDp = tex(Wpx, Hpx, DEPTH, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING, { samples: AA });
   const tRes = tex(Wpx, Hpx, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING), tRay = tex(Wpx / 2, Hpx / 2, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING), tRay2 = tex(Wpx / 2, Hpx / 2, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
-  const tAmbMS = tex(AA > 1 ? Wpx : 1, Hpx, 'r8unorm', TU.RENDER_ATTACHMENT, { samples: AA }), tAmb = tex(Wpx, Hpx, 'r8unorm', TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
+  const tAmbMS = tex(AA > 1 ? Wpx : 1, Hpx, 'rgba8unorm', TU.RENDER_ATTACHMENT, { samples: AA }), tAmb = tex(Wpx, Hpx, 'rgba8unorm', TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
   targets = [tMS, tDp, tRes, tRay, tRay2, tAmbMS, tAmb];
   const bl = [];
   for (let i = 0; i < NB; i++) { const t = tex(max(1, Wpx >> (i + 1)), max(1, Hpx >> (i + 1)), HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING); bl.push(t); targets.push(t); }
@@ -301,15 +301,18 @@ function resize() {
   if (TAA) {
     const tAO = tex(Wpx / 2, Hpx / 2, 'rg16float', TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING), tAO2 = tex(Wpx / 2, Hpx / 2, 'rg16float', TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
     const tH = [0, 1].map(() => tex(Wpx, Hpx, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING)), vH = tH.map((t) => t.createView());
-    targets.push(tAO, tAO2, ...tH);
-    passAO = { colorAttachments: [colorAtt(tAO.createView(), true)] }; passAOB = { colorAttachments: [colorAtt(tAO2.createView(), true)] };
-    bgAO = device.createBindGroup({ layout: pAO.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: vDp }] });
-    bgAOB = device.createBindGroup({ layout: pAOB.getBindGroupLayout(0), entries: [{ binding: 0, resource: tAO.createView() }] });
+    const tGI = tex(Wpx / 2, Hpx / 2, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING), tGI2 = tex(Wpx / 2, Hpx / 2, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
+    targets.push(tAO, tAO2, tGI, tGI2, ...tH);
+    passAO = { colorAttachments: [colorAtt(tAO.createView(), true), colorAtt(tGI.createView(), true)] };
+    passAOB = { colorAttachments: [colorAtt(tAO2.createView(), true), colorAtt(tGI2.createView(), true)] };
+    // the bounce reads last frame's result: the history this frame's TAA does not write
+    for (let k = 0; k < 2; k++) bgAO[k] = device.createBindGroup({ layout: pAO.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: vDp }, { binding: 2, resource: vH[1 - k] }] });
+    bgAOB = device.createBindGroup({ layout: pAOB.getBindGroupLayout(0), entries: [{ binding: 0, resource: tAO.createView() }, { binding: 1, resource: tGI.createView() }] });
     // ping k writes history k from history 1 - k; bloom and the composite then read history k
     for (let k = 0; k < 2; k++) {
       passTAA[k] = { colorAttachments: [colorAtt(vH[k], true)] };
       bgTAA[k] = device.createBindGroup({ layout: pTAA.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: sClamp }, { binding: 2, resource: vRes },
-        { binding: 3, resource: tAmb.createView() }, { binding: 4, resource: tAO2.createView() }, { binding: 5, resource: vDp }, { binding: 6, resource: vH[1 - k] }] });
+        { binding: 3, resource: tAmb.createView() }, { binding: 4, resource: tAO2.createView() }, { binding: 5, resource: vDp }, { binding: 6, resource: vH[1 - k] }, { binding: 7, resource: tGI2.createView() }] });
       bgPostT[k] = device.createBindGroup({ layout: pPost.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: sClamp }, { binding: 2, resource: vH[k] },
         { binding: 3, resource: vRay2 }, { binding: 4, resource: vBl[0] }, { binding: 5, resource: vDp }] });
       bloomBG0[k] = blitBG(vH[k]);
@@ -443,7 +446,7 @@ function render() {
   r.setPipeline(pMote); r.setVertexBuffer(0, ibMotes); r.draw(4, nMotes);
   r.end();
   if (TAA) {
-    r = e.beginRenderPass(passAO); r.setPipeline(pAO); r.setBindGroup(0, bgAO); r.draw(3); r.end();
+    r = e.beginRenderPass(passAO); r.setPipeline(pAO); r.setBindGroup(0, bgAO[ping]); r.draw(3); r.end();
     r = e.beginRenderPass(passAOB); r.setPipeline(pAOB); r.setBindGroup(0, bgAOB); r.draw(3); r.end();
     r = e.beginRenderPass(passTAA[ping]); r.setPipeline(pTAA); r.setBindGroup(0, bgTAA[ping]); r.draw(3); r.end();
   }
