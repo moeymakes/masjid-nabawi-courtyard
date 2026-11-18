@@ -43,17 +43,46 @@ const tDummy = tex(1, 1, DEPTH, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
 const tDetail = tex(1024, 1024, 'rgba8unorm', TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING, { mips: 11 });
 const tFar = tex(FN, FN, 'rgba8unorm', TU.TEXTURE_BINDING | TU.COPY_DST);
 
-const UB = new Float32Array(80), UBS = new Float32Array(80);
-const ubo = device.createBuffer({ size: 320, usage: BU.UNIFORM | BU.COPY_DST }), uboS = device.createBuffer({ size: 320, usage: BU.UNIFORM | BU.COPY_DST });
+// ---------------------------------------------------------------- atmosphere LUTs (once: the sun does not move)
+const tTr = tex(256, 64, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING), tMSc = tex(32, 32, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
+const tSV = tex(192, 108, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING | TU.COPY_SRC);
+let AMBUP;
+{
+  const m = mod(W_ATMLUT), mk = (fs) => device.createRenderPipeline({ layout: 'auto', vertex: { module: m, entryPoint: 'vs' }, fragment: { module: m, entryPoint: fs, targets: [{ format: HDR }] } });
+  const pT = mk('fsT'), pM = mk('fsM'), pS = mk('fsS'), rb = device.createBuffer({ size: 192 * 108 * 8, usage: BU.MAP_READ | BU.COPY_DST });
+  const bgM = device.createBindGroup({ layout: pM.getBindGroupLayout(0), entries: [{ binding: 0, resource: tTr.createView() }, { binding: 2, resource: sClamp }] });
+  const bgS = device.createBindGroup({ layout: pS.getBindGroupLayout(0), entries: [{ binding: 0, resource: tTr.createView() }, { binding: 1, resource: tMSc.createView() }, { binding: 2, resource: sClamp }] });
+  const e = device.createCommandEncoder();
+  for (const [p, t, bg] of [[pT, tTr], [pM, tMSc, bgM], [pS, tSV, bgS]]) { const r = e.beginRenderPass({ colorAttachments: [{ view: t.createView(), loadOp: 'clear', storeOp: 'store' }] }); r.setPipeline(p); if (bg) r.setBindGroup(0, bg); r.draw(3); r.end(); }
+  e.copyTextureToBuffer({ texture: tSV }, { buffer: rb, bytesPerRow: 192 * 8 }, [192, 108]);
+  Q.submit([e.finish()]);
+  await rb.mapAsync(GPUMapMode.READ);
+  const h = new Uint16Array(rb.getMappedRange()), f16 = (x) => { const ex = (x >> 10) & 31, fr = x & 1023; return ex ? 2 ** (ex - 15) * (1 + fr / 1024) : fr * 2 ** -24; };
+  // irradiance of the sky on an up-facing surface: sum radiance x cos over the LUT's texels (both azimuth halves)
+  const I = [0, 0, 0];
+  for (let j = 0; j < 108; j++) {
+    const v = (j + .5) / 108 * 2 - 1, el = Math.sign(v) * v * v * PI / 2; if (el <= 0) continue;
+    const w = sin(el) * cos(el) * (2 * PI * abs(v) / 108) * (PI / 192) * 2;
+    for (let i = 0; i < 192; i++) for (let c = 0; c < 3; c++) I[c] += f16(h[(j * 192 + i) * 4 + c]) * w;
+  }
+  rb.unmap(); rb.destroy();
+  AMBUP = I.map((x, c) => x * ATM_S * ATM_NT[c] * (TP.night ? .3 : 1));
+  window.__atm = { sunc: SUNCP, ambup: AMBUP, S: ATM_S };
+}
+const UB = new Float32Array(84), UBS = new Float32Array(84);
+const ubo = device.createBuffer({ size: 336, usage: BU.UNIFORM | BU.COPY_DST }), uboS = device.createBuffer({ size: 336, usage: BU.UNIFORM | BU.COPY_DST });
 const VF = SS.VERTEX | SS.FRAGMENT;
 const bgl0 = device.createBindGroupLayout({ entries: [
   { binding: 0, visibility: VF, buffer: {} },
   { binding: 1, visibility: VF, sampler: {} }, { binding: 2, visibility: VF, sampler: {} }, { binding: 3, visibility: VF, sampler: { type: 'comparison' } },
-  { binding: 4, visibility: VF, texture: { sampleType: 'depth' } }, { binding: 5, visibility: VF, texture: {} }, { binding: 8, visibility: VF, texture: {} }] });
+  { binding: 4, visibility: VF, texture: { sampleType: 'depth' } }, { binding: 5, visibility: VF, texture: {} }, { binding: 8, visibility: VF, texture: {} },
+  { binding: 9, visibility: VF, texture: {} }, { binding: 10, visibility: VF, texture: {} }] });
 const mkBG0 = (u, sh) => device.createBindGroup({ layout: bgl0, entries: [
   { binding: 0, resource: { buffer: u } }, { binding: 1, resource: sRep }, { binding: 2, resource: sClamp }, { binding: 3, resource: sCmp },
-  { binding: 4, resource: sh.createView() }, { binding: 5, resource: tDetail.createView() }, { binding: 8, resource: tFar.createView() }] });
+  { binding: 4, resource: sh.createView() }, { binding: 5, resource: tDetail.createView() }, { binding: 8, resource: tFar.createView() },
+  { binding: 9, resource: tSV.createView() }, { binding: 10, resource: tMSc.createView() }] });
 const bg0 = mkBG0(ubo, tShadow), bg0s = mkBG0(uboS, tDummy);
+for (let c = 0; c < 3; c++) UB[80 + c] = UBS[80 + c] = AMBUP[c];
 const pl0 = device.createPipelineLayout({ bindGroupLayouts: [bgl0] });
 
 const bglBlit = device.createBindGroupLayout({ entries: [{ binding: 0, visibility: SS.FRAGMENT, texture: {} }, { binding: 1, visibility: SS.FRAGMENT, sampler: {} }] });
