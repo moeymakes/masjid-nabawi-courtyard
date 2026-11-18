@@ -944,14 +944,16 @@ struct VO { @builtin(position) cp: vec4f, @location(0) d: vec3f };
   if (rd.y > .008) {
     let tpl = (3000. - g.cam.y) / rd.y;
     let pp = g.cam.xz + rd.xz * tpl;
-    let uv = pp * .00013 + vec2f(g.cam.w * .0008, g.cam.w * .0003);
-    let dn = fbm(vec3f(uv, 4.2), 5) + .25 * (fbm(vec3f(uv * 3.3, 7.7), 3) - .5);
-    let cv = ss(.57, .76, dn) * ss(.008, .06, rd.y) * ss(70000., 20000., tpl);
+    // cells a few hundred metres across with crisp edges: seen overhead, a soft large-scale field reads as a smudge
+    let uv = pp * .00045 + vec2f(.37 + g.cam.w * .0008, .61 + g.cam.w * .0003);
+    let dn = fbm(vec3f(uv * .35, 4.2), 3) * .55 + fbm(vec3f(uv, 9.1), 5) * .45 + .18 * (fbm(vec3f(uv * 3.3, 7.7), 3) - .5);
+    let cv = ss(.6, .66, dn) * ss(.008, .06, rd.y) * ss(70000., 20000., tpl);
     if (cv > .001) {
-      let dl = fbm(vec3f(uv + normalize(L.xz) * .05, 4.2), 4);
-      let sh = exp(-ss(.5, .85, dl) * 2.4);
-      let lit = (CLOUDSUN * (.22 + 1.1 * pow(max(mu, 0.), 4.)) * sh + g.amb.xyz * (.8 + .4 * ss(.6, .9, dn))) * ${[2.6, 1.3, 1][TOD]};
-      c = mix(c, mix(lit, c, ss(15000., 70000., tpl) * .7), cv * .92);
+      let dl = fbm(vec3f(uv * .35 + normalize(L.xz) * .02, 4.2), 3) * .55 + fbm(vec3f(uv + normalize(L.xz) * .06, 9.1), 4) * .45;
+      let sh = exp(-ss(.55, .8, dl) * 2.4);
+      let rim = 1. - ss(.6, .7, dn);
+      let lit = (CLOUDSUN * (.22 + 1.1 * pow(max(mu, 0.), 4.) + .3 * rim) * sh + g.amb.xyz * (.8 + .4 * ss(.6, .9, dn))) * ${[1.6, 1.1, 1][TOD]};
+      c = mix(c, mix(lit, c, ss(15000., 70000., tpl) * .7), cv * mix(.92, .4, NIGHT));
     }
   }
   c += mix(SUNC * 9., vec3f(2.4, 2.4, 2.2), NIGHT) * ss(mix(.99988, .99975, NIGHT), mix(.99994, .99982, NIGHT), mu);
