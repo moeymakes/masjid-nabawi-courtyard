@@ -703,7 +703,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   let ndl = sat(dot(N, L));
   let uc = uCell(i.wp.xz);
   let under = uOpen(g.mis.w, uDelay(uc.zw)) * (1. - ss(11., 14., max(abs(uc.x), abs(uc.y)))) * ss(15.5, 12., i.wp.y) * f32(!far);
-  let am = (amb(N, so) + (AMBC * vec3f(.95, .86, .74) * .42 + vec3f(1., .78, .5) * .15 * NIGHT) * under * sat(N.y * .5 + .6)) * ao;
+  let am = (amb(N, so) + (AMBC * vec3f(.95, .86, .74) * .42 + vec3f(1., .78, .5) * .06 * NIGHT) * under * sat(N.y * .5 + .6)) * ao;
   var c = alb * (E * ndl + am) + emi;
   if (NIGHT > .5 && !far) { c += alb * nightLights(i.wp, N) * vao; }
   let Hh = normalize(V + L);
@@ -775,7 +775,7 @@ fn mem(a: f32, s: f32, e: f32, sd: f32) -> vec3f {
   let so = skyOcc(i.wp + n * 1.5);
   var alb = vec3f(.78, .77, .745) * (1. - .2 * seam) * (.97 + .06 * h2(vec2f(floor(a / TAU * 32.), i.k.y * 91.)));
   // light bounced up from the marble: it follows the sun and sky, so at night only the floodlit floor feeds it
-  let bounce = vec3f(.98, .86, .70) * .4 * mix(1., .3, NIGHT) * sat(-n.y) * mix(.6, 1., e);
+  let bounce = vec3f(.98, .86, .70) * .4 * mix(1., .12, NIGHT) * sat(-n.y) * mix(.6, 1., e);
   var c = alb * (Es * ndl * lit + amb(n, so) + bounce);
   c += Es * pow(sat(dot(n, normalize(V + L))), 40.) * .08 * f32(top);
   c = mix(c, vec3f(.55, .55, .56) * (amb(n, so) + bounce * .6), arm);
@@ -919,7 +919,7 @@ struct VO { @builtin(position) cp: vec4f, @location(0) d: vec3f };
   let rd = normalize(i.d); let L = g.sun.xyz; let mu = dot(rd, L);
   // the visible dome is lifted a little over the physical radiance at dawn and golden hour, as a photograph exposed for
   // the sunlit stone would show it; the LUT's own value still drives ambient and aerial perspective
-  var c = skyCol(rd, L) * ${[1.6, 1.3, 1][TOD]};
+  var c = skyCol(rd, L) * ${[2.6, 1.3, 1][TOD]};
   // high thin cloud: streaks of cirrus on a plane 6 km up, lit gold toward the sun and rose away from it
   if (rd.y > .004) {
     let q = rd.xz / rd.y * 6000.;
