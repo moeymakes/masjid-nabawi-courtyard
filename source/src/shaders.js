@@ -160,7 +160,9 @@ fn kar(c: vec3f) -> vec4f { let w = 1. / (1. + max(c.r, max(c.g, c.b))); return 
 
 // ---------------------------------------------------------------- shared: uniforms, sky, air, layout
 const S_G = /*wgsl*/`
-struct G { vp: mat4x4f, sm: mat4x4f, cam: vec4f, right: vec4f, up: vec4f, fwd: vec4f, sun: vec4f, res: vec4f, mis: vec4f };
+// pvp: last frame's unjittered view-projection; jit: xy this frame's projection jitter in NDC, z history reset (1), w frame
+struct G { vp: mat4x4f, sm: mat4x4f, cam: vec4f, right: vec4f, up: vec4f, fwd: vec4f, sun: vec4f, res: vec4f, mis: vec4f, pvp: mat4x4f, jit: vec4f };
+const LUMA = vec3f(.2126, .7152, .0722);
 const SUNC = vec3f(${TP.sunc.join(', ')});
 const ZEN = vec3f(${TP.zen.join(', ')});
 const COOLH = vec3f(${TP.cool.join(', ')}); const WARMH = vec3f(${TP.warm.join(', ')}); const BAND = vec3f(${TP.band.join(', ')}); const ROSE = vec3f(${TP.rose.join(', ')}); const FARBLUE = vec3f(${TP.farblue.join(', ')}); const AMBC = vec3f(${TP.ambc.join(', ')});
@@ -196,7 +198,8 @@ fn skyCol(rd: vec3f, sun: vec3f) -> vec3f {
 }
 // aerial perspective: exponential-height haze integrated in closed form along the view ray; distant things
 // fade toward the sky's horizon colour in their direction (warm toward the sun, rose-grey away from it)
-fn aerialAt(c: vec3f, cam: vec3f, wp: vec3f, sun: vec3f) -> vec3f {
+struct Air { t: vec3f, i: vec3f };
+fn airAt(cam: vec3f, wp: vec3f, sun: vec3f) -> Air {
   let v = wp - cam; let d = max(length(v), 1e-3); let rd = v / d;
   let k = rd.y / HSCALE;
   let od = select((1. - exp(-k * d)) / k, d, abs(k) < 1e-7) * exp(-max(cam.y, -30.) / HSCALE);
@@ -204,8 +207,9 @@ fn aerialAt(c: vec3f, cam: vec3f, wp: vec3f, sun: vec3f) -> vec3f {
   let od2 = select((1. - exp(-k2 * d)) / k2, d, abs(k2) < 1e-7) * exp(-max(cam.y, -30.) / 60.);
   let T = exp(-BETA * od - vec3f(1.2e-4, 1.3e-4, 1.45e-4) * od2);
   let ins = mix(skyCol(normalize(vec3f(rd.x, max(rd.y, 0.) * .3 + .012, rd.z)), sun), FARBLUE, ss(900., 6000., d) * .4);
-  return c * T + ins * (1. - T);
+  return Air(T, ins * (1. - T));
 }
+fn aerialAt(c: vec3f, cam: vec3f, wp: vec3f, sun: vec3f) -> vec3f { let a = airAt(cam, wp, sun); return c * a.t + a.i; }
 fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2. * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
 // palms sway as a whole from the root: the same offset moves trunk tops and their fronds together
 fn palmSway(b: vec2f, h: f32, t: f32) -> vec2f {
@@ -261,6 +265,14 @@ fn amb(n: vec3f, sky: f32) -> vec3f {
   return AMBC * (mix(ZEN, vec3f(.80, .69, .58), .62) * 1.05 * up * up * (.35 + .65 * sky) + vec3f(.86, .78, .68) * .72 * (1. - up) * (.65 + .35 * sky) + vec3f(.12, .11, .10) * (.5 + .5 * sky));
 }
 fn aerial(c: vec3f, wp: vec3f) -> vec3f { return aerialAt(c, g.cam.xyz, wp, g.sun.xyz); }
+// second target: the share of the pixel's light that is ambient (sky and bounce), so screen-space AO can darken
+// only that part and never the sunlit or emissive part
+struct FO { @location(0) c: vec4f, @location(1) a: vec4f };
+fn outA(c: vec3f, amb: vec3f, wp: vec3f, alpha: f32) -> FO {
+  let air = airAt(g.cam.xyz, wp, g.sun.xyz);
+  let col = min(max(min(max(c, vec3f(0.)), vec3f(60.)) * air.t + air.i, vec3f(0.)), vec3f(60.));
+  return FO(vec4f(col, alpha), vec4f(sat(dot(amb * air.t, LUMA) / max(dot(col, LUMA), 1e-5))));
+}
 `;
 
 // ---------------------------------------------------------------- solids: floor, buildings, columns, lamps, palms
@@ -362,7 +374,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   }
   return col;
 }
-@fragment fn fs(i: VO, @builtin(front_facing) ff: bool) -> @location(0) vec4f {
+@fragment fn fs(i: VO, @builtin(front_facing) ff: bool) -> FO {
   let mat = i32(i.m.x + .5); let sd = i.m.y; let fl_ = select(-1., 1., ff);
   let on = normalize(i.on) * fl_; let n0 = normalize(i.n) * fl_;
   let dist = length(i.wp - g.cam.xyz);
@@ -538,14 +550,17 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   let Hh = normalize(V + L);
   let spc = mix(vec3f(.04), alb, metal);
   c += E * spc * pow(sat(dot(N, Hh)), mix(8., 160., gloss)) * gloss * ndl * 4.;
+  var ambS = alb * am;
   if (mat == 19) {
     // polished marble: a Fresnel mirror of the facade, the canopies and the sky, plus the sun's glint
     let Rr = reflect(-V, N); let fr = .04 + .96 * pow(1. - sat(dot(N, V)), 5.);
-    c = c * (1. - fr * polish) + floorRefl(i.wp, Rr) * fr * polish * mix(.6, 1., so);
+    let rf = floorRefl(i.wp, Rr) * fr * polish * mix(.6, 1., so);
+    c = c * (1. - fr * polish) + rf; ambS = ambS * (1. - fr * polish) + rf;
   } else {
-    c += skyCol(reflect(-V, N), L) * ao * spc * gloss * pow(1. - sat(dot(N, V)), 3.) * 1.5;
+    let rf = skyCol(reflect(-V, N), L) * ao * spc * gloss * pow(1. - sat(dot(N, V)), 3.) * 1.5;
+    c += rf; ambS += rf;
   }
-  return fin(aerial(c, i.wp));
+  return outA(c, ambS, i.wp, 1.);
 }
 `;
 
@@ -580,7 +595,7 @@ fn mem(a: f32, s: f32, e: f32, sd: f32) -> vec3f {
   o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = n; o.uv = vec2f(a, s); o.k = vec2f(e, ins.w);
   return o;
 }
-@fragment fn fs(i: UO) -> @location(0) vec4f {
+@fragment fn fs(i: UO) -> FO {
   let V = normalize(g.cam.xyz - i.wp); let L = g.sun.xyz;
   let ng = normalize(i.n); let top = dot(ng, V) > 0.; let n = select(-ng, ng, top);
   let a = i.uv.x; let s = i.uv.y; let e = i.k.x;
@@ -605,7 +620,7 @@ fn mem(a: f32, s: f32, e: f32, sd: f32) -> vec3f {
   c = mix(c, vec3f(.55, .55, .56) * (amb(n, so) + bounce * .6), arm);
   c = mix(c, c * .6, hem);
   c *= 1. - .45 * fold;
-  return fin(aerial(c, i.wp));
+  return outA(c, alb * (amb(n, so) + bounce) * (1. - .45 * fold), i.wp, 1.);
 }
 `;
 
@@ -671,7 +686,7 @@ fn leafCov(i: LO) -> f32 {
   return select(1., sharp, i.pr.x > .5);
 }
 @fragment fn fsSh(i: LO) { if (leafCov(i) < .5) { discard; } }
-@fragment fn fs(i: LO, @builtin(front_facing) ff: bool) -> @location(0) vec4f {
+@fragment fn fs(i: LO, @builtin(front_facing) ff: bool) -> FO {
   // leaflets: slanted strips either side of the rachis, cut from the frond by alpha (to coverage with MSAA)
   let alpha = leafCov(i);
   let lt = textureSample(tD, sR, vec2f(i.uv.x * .1 + i.sd.x * 3.7, i.uv.y * .6 + i.sd.y * 5.3));
@@ -690,7 +705,7 @@ fn leafCov(i: LO) -> f32 {
   let H = normalize(V + L);
   c += E * pow(sat(dot(n, H)), 30.) * .25;
   c += E * trc * i.pr.y * pow(sat(dot(-V, L)), 4.) * .8;
-  return vec4f(aerial(min(max(c, vec3f(0.)), vec3f(60.)), i.wp), alpha);
+  return outA(c, alb * am, i.wp, alpha);
 }
 `;
 
@@ -844,6 +859,7 @@ const W_POST = S_G + W_FS + /*wgsl*/`
 @group(0) @binding(3) var tR: texture_2d<f32>;
 @group(0) @binding(4) var tB: texture_2d<f32>;
 @group(0) @binding(5) var tDp: texture_depth${AA > 1 ? '_multisampled' : ''}_2d;
+const SHARP = .8;
 fn tmap(x: vec3f) -> vec3f { return clamp((x * (2.51 * x + .03)) / (x * (2.43 * x + .59) + .14), vec3f(0.), vec3f(1.)); }
 @fragment fn fs(@builtin(position) fc: vec4f) -> @location(0) vec4f {
   let px = vec2i(fc.xy);
@@ -859,7 +875,15 @@ fn tmap(x: vec3f) -> vec3f { return clamp((x * (2.51 * x + .03)) / (x * (2.43 * 
     let w = (bw + .02) / (.02 + abs(r.a - zf) / zf);
     acc += r.rgb * w; ws += w;
   }
-  var c = textureLoad(tS, px, 0).rgb + acc / ws;
+  var c = textureLoad(tS, px, 0).rgb;
+  if (${LV < 2}) {
+    // TAA averages sub-pixel detail away; a clamped unsharp mask brings it back without halos
+    let sm = vec2i(textureDimensions(tS)) - 1;
+    let n0 = textureLoad(tS, clamp(px + vec2i(1, 0), vec2i(0), sm), 0).rgb; let n1 = textureLoad(tS, clamp(px - vec2i(1, 0), vec2i(0), sm), 0).rgb;
+    let n2 = textureLoad(tS, clamp(px + vec2i(0, 1), vec2i(0), sm), 0).rgb; let n3 = textureLoad(tS, clamp(px - vec2i(0, 1), vec2i(0), sm), 0).rgb;
+    c = clamp(c + (c - (n0 + n1 + n2 + n3) * .25) * SHARP, min(min(min(n0, n1), min(n2, n3)), c), max(max(max(n0, n1), max(n2, n3)), c));
+  }
+  c += acc / ws;
   let bl = textureSampleLevel(tB, sC, uv, 0.).rgb;
   c = mix(c, bl, .012) + bl * .005;
   c *= g.mis.x;
@@ -873,5 +897,141 @@ fn tmap(x: vec3f) -> vec3f { return clamp((x * (2.51 * x + .03)) / (x * (2.43 * 
   c = pow(max(c, vec3f(0.)), vec3f(1. / 2.2));
   let n = ign(fc.xy) + ign(fc.xy + 37.) - 1.;
   return vec4f(c + n / 255., 1.);
+}
+`;
+
+// ---------------------------------------------------------------- ground-truth ambient occlusion (half res)
+// GTAO (Jimenez et al. 2016, structure after XeGTAO): per slice direction, find the highest horizon on each side
+// from the depth buffer, then integrate the cosine-weighted visible arc against the projected normal. Positions
+// are camera-relative world space, so no view matrix is needed. Noise rotates every frame; TAA averages it.
+const W_AO = S_G + W_FS + /*wgsl*/`
+@group(0) @binding(0) var<uniform> g: G;
+@group(0) @binding(1) var tDp: texture_depth_multisampled_2d;
+const SLICES = ${LV ? 2 : 3}; const STEPS = ${LV ? 3 : 4};
+fn zAt(p: vec2i) -> f32 { return g.fwd.w / max(textureLoad(tDp, clamp(p, vec2i(0), vec2i(g.res.xy) - 1), 0), 1e-7); }
+fn posAt(q: vec2f, z: f32) -> vec3f {
+  let uv = q * g.res.zw; let nd = vec2f(uv.x * 2. - 1., 1. - uv.y * 2.) - g.jit.xy;
+  return (g.fwd.xyz + g.right.xyz * (nd.x * g.right.w) + g.up.xyz * (nd.y * g.up.w)) * z;
+}
+fn fastAcos(x: f32) -> f32 { let a = abs(x); let r = (-.156583 * a + 1.570796) * sqrt(max(1. - a, 0.)); return select(3.141593 - r, r, x >= 0.); }
+@fragment fn fs(@builtin(position) fc: vec4f) -> @location(0) vec4f {
+  let p = vec2i(fc.xy) * 2; let q = vec2f(p) + .5;
+  let dp = textureLoad(tDp, p, 0);
+  if (dp < 1e-7) { return vec4f(1., 6e4, 0., 0.); }
+  let z = g.fwd.w / dp; let P = posAt(q, z);
+  let zr = zAt(p + vec2i(2, 0)); let zl = zAt(p - vec2i(2, 0)); let zd = zAt(p + vec2i(0, 2)); let zu = zAt(p - vec2i(0, 2));
+  let dx = select(P - posAt(q - vec2f(2., 0.), zl), posAt(q + vec2f(2., 0.), zr) - P, abs(zr - z) < abs(zl - z));
+  let dy = select(P - posAt(q - vec2f(0., 2.), zu), posAt(q + vec2f(0., 2.), zd) - P, abs(zd - z) < abs(zu - z));
+  let V = -normalize(P);
+  var N = normalize(cross(dx, dy));
+  if (dot(N, V) < 0.) { N = -N; }
+  // 2.5 m around the point, but never under 8 px, so the far city still gets dark alleys and building feet
+  let ppm = g.res.y * .5 / (z * g.up.w);
+  let rpx = clamp(2.5 * ppm, 8., 110.); let R = rpx / ppm;
+  let fr = R * .62; let fmul = -1. / fr; let fadd = (R - fr) / fr + 1.;
+  let nz = fract(ign(fc.xy) + g.jit.w * .618034); let nz2 = fract(ign(fc.xy + 71.) + g.jit.w * .754877);
+  var vis = 0.;
+  for (var sl = 0; sl < SLICES; sl++) {
+    let phi = (f32(sl) + nz) / f32(SLICES) * 3.141593;
+    let om = vec2f(cos(phi), -sin(phi));
+    let dir = g.right.xyz * om.x - g.up.xyz * om.y;
+    let od = dir - dot(dir, V) * V;
+    let ax = normalize(cross(od, V));
+    let pn = N - ax * dot(N, ax); let pl = length(pn);
+    let cn = sat(dot(pn, V) / max(pl, 1e-4));
+    let n = sign(dot(od, pn)) * fastAcos(cn);
+    let lo0 = cos(n + 1.570796); let lo1 = cos(n - 1.570796);
+    var h0 = lo0; var h1 = lo1;
+    for (var st = 0; st < STEPS; st++) {
+      var t = (f32(st) + nz2) / f32(STEPS); t = t * t;
+      let o = om * max(t * rpx, 2. + f32(st));
+      let a = vec2i(q + o); let b = vec2i(q - o);
+      let da = posAt(vec2f(a) + .5, zAt(a)) - P; let db = posAt(vec2f(b) + .5, zAt(b)) - P;
+      let la = max(length(da), 1e-4); let lb = max(length(db), 1e-4);
+      h0 = max(h0, mix(lo0, dot(da / la, V), sat(la * fmul + fadd)));
+      h1 = max(h1, mix(lo1, dot(db / lb, V), sat(lb * fmul + fadd)));
+    }
+    let a0 = n + clamp(-fastAcos(h1) - n, -1.570796, 1.570796);
+    let a1 = n + clamp(fastAcos(h0) - n, -1.570796, 1.570796);
+    vis += pl * ((cn + 2. * a0 * sin(n) - cos(2. * a0 - n)) + (cn + 2. * a1 * sin(n) - cos(2. * a1 - n))) * .25;
+  }
+  return vec4f(pow(sat(vis / f32(SLICES)), 1.6), z, 0., 0.);
+}
+`;
+// depth-aware 5x5 blur of the half-res AO
+const W_AOB = W_FS + /*wgsl*/`
+@group(0) @binding(0) var tO: texture_2d<f32>;
+@fragment fn fs(@builtin(position) fc: vec4f) -> @location(0) vec4f {
+  let p = vec2i(fc.xy); let mx = vec2i(textureDimensions(tO)) - 1;
+  let c = textureLoad(tO, p, 0);
+  var acc = 0.; var ws = 0.;
+  for (var y = -2; y <= 2; y++) { for (var x = -2; x <= 2; x++) {
+    let r = textureLoad(tO, clamp(p + vec2i(x, y), vec2i(0), mx), 0);
+    let w = (1. - .1 * f32(x * x + y * y)) / (.02 + abs(r.y - c.y) / c.y);
+    acc += r.x * w; ws += w;
+  } }
+  return vec4f(acc / ws, c.y, 0., 0.);
+}
+`;
+// ---------------------------------------------------------------- temporal anti-aliasing (full res)
+// AO is applied to the ambient share here; then the frame is blended with last frame's result, reprojected by
+// depth, with the history clipped to the 3x3 neighbourhood's colour range so moving fronds do not ghost.
+const W_TAA = S_G + W_FS + /*wgsl*/`
+@group(0) @binding(0) var<uniform> g: G;
+@group(0) @binding(1) var sC: sampler;
+@group(0) @binding(2) var tS: texture_2d<f32>;
+@group(0) @binding(3) var tA: texture_2d<f32>;
+@group(0) @binding(4) var tO: texture_2d<f32>;
+@group(0) @binding(5) var tDp: texture_depth_multisampled_2d;
+@group(0) @binding(6) var tH: texture_2d<f32>;
+fn tm(c: vec3f) -> vec3f { return c / (1. + dot(c, LUMA)); }
+fn itm(c: vec3f) -> vec3f { return c / max(1. - dot(c, LUMA), 1e-3); }
+fn aoUp(p: vec2i, z: f32) -> f32 {
+  let h = (vec2f(p) + .5) * .5 - .5; let b = floor(h); let f = h - b; let bi = vec2i(b);
+  let mx = vec2i(textureDimensions(tO)) - 1;
+  var acc = 0.; var ws = 0.;
+  for (var k = 0; k < 4; k++) {
+    let o = vec2i(k & 1, k >> 1);
+    let r = textureLoad(tO, clamp(bi + o, vec2i(0), mx), 0);
+    let w = (mix(1. - f.x, f.x, f32(o.x)) * mix(1. - f.y, f.y, f32(o.y)) + .01) / (.01 + abs(r.y - z) / z);
+    acc += r.x * w; ws += w;
+  }
+  return acc / ws;
+}
+// 5-tap Catmull-Rom history fetch: sharper than bilinear, so the image does not soften as frames accumulate
+fn hs5(uv: vec2f) -> vec3f {
+  let sz = vec2f(textureDimensions(tH)); let p = uv * sz; let tc = floor(p - .5) + .5; let f = p - tc;
+  let w0 = f * (-.5 + f * (1. - .5 * f)); let w1 = 1. + f * f * (-2.5 + 1.5 * f); let w2 = f * (.5 + f * (2. - 1.5 * f)); let w3 = f * f * (-.5 + .5 * f);
+  let w12 = w1 + w2; let t0 = (tc - 1.) / sz; let t3 = (tc + 2.) / sz; let t12 = (tc + w2 / w12) / sz;
+  let a = w12.x * w0.y; let b = w0.x * w12.y; let c = w12.x * w12.y; let d = w3.x * w12.y; let e = w12.x * w3.y;
+  let r = textureSampleLevel(tH, sC, vec2f(t12.x, t0.y), 0.).rgb * a + textureSampleLevel(tH, sC, vec2f(t0.x, t12.y), 0.).rgb * b
+    + textureSampleLevel(tH, sC, t12, 0.).rgb * c + textureSampleLevel(tH, sC, vec2f(t3.x, t12.y), 0.).rgb * d + textureSampleLevel(tH, sC, vec2f(t12.x, t3.y), 0.).rgb * e;
+  return max(r / (a + b + c + d + e), vec3f(0.));
+}
+@fragment fn fs(@builtin(position) fc: vec4f) -> @location(0) vec4f {
+  let px = vec2i(fc.xy); let mx = vec2i(g.res.xy) - 1;
+  var m1 = vec3f(0.); var m2 = vec3f(0.); var lo = vec3f(1e9); var hi = vec3f(-1e9); var cur = vec3f(0.);
+  var zmin = 1e9; var dpn = 0.; var pn = px;
+  for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) {
+    let q = clamp(px + vec2i(x, y), vec2i(0), mx);
+    let dp = textureLoad(tDp, q, 0); let z = g.fwd.w / max(dp, 1e-7);
+    let c = tm(textureLoad(tS, q, 0).rgb * (1. - (1. - aoUp(q, z)) * textureLoad(tA, q, 0).r));
+    m1 += c; m2 += c * c; lo = min(lo, c); hi = max(hi, c);
+    if (x == 0 && y == 0) { cur = c; }
+    if (z < zmin) { zmin = z; dpn = dp; pn = q; }
+  } }
+  // reproject the nearest surface in the neighbourhood, so thin foreground edges do not trail
+  let uv = (vec2f(pn) + .5) * g.res.zw; let nd = vec2f(uv.x * 2. - 1., 1. - uv.y * 2.) - g.jit.xy;
+  let rv = g.fwd.xyz + g.right.xyz * (nd.x * g.right.w) + g.up.xyz * (nd.y * g.up.w);
+  let pc = select(g.pvp * vec4f(g.cam.xyz + rv * zmin, 1.), g.pvp * vec4f(rv, 0.), dpn < 1e-7);
+  let pu = vec2f(pc.x / pc.w * .5 + .5, .5 - pc.y / pc.w * .5) - uv + (vec2f(px) + .5) * g.res.zw;
+  let mean = m1 / 9.; let sg = sqrt(max(m2 / 9. - mean * mean, vec3f(0.)));
+  let blo = max(lo, mean - sg * 1.25); let bhi = min(hi, mean + sg * 1.25);
+  let hist = clamp(tm(hs5(pu)), blo, bhi);
+  let off = any(pu < vec2f(0.)) || any(pu > vec2f(1.)) || pc.w <= 0.;
+  let a = select(max(g.jit.z, .1), 1., off);
+  var o = itm(mix(hist, cur, a));
+  if (any(o != o)) { o = itm(cur); }
+  return vec4f(min(o, vec3f(60.)), 1.);
 }
 `;

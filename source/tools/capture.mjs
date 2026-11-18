@@ -32,6 +32,8 @@ const out = path.resolve(opt('out', 'capture-out'));
 const [W, H] = opt('size', '2560x1440').split('x').map(Number);
 const nPoses = +opt('poses', 6), settle = +opt('settle', 2000), flight = +opt('flight', 0), nFrames = +opt('frames', 24), bench = +opt('bench', 0);
 const flightKey = opt('flight-key', 'KeyF');
+// --at x,y,z,yaw,pitch[;x,y,z,yaw,pitch...]: extra stills from free camera positions (flying), saved as at-<n>.png
+const at = opt('at', '');
 const chrome = opt('chrome', process.env.CHROME || '/usr/bin/google-chrome-stable');
 mkdirSync(out, { recursive: true });
 const profile = path.join(out, '.chrome-profile'); rmSync(profile, { recursive: true, force: true });
@@ -77,6 +79,16 @@ for (let i = 1; i <= nPoses; i++) {
   const h = await hud(); run[`pose${i}`] = h;
   console.log(`pose ${i}: ${g.w}x${g.h}  ${h}`);
   if (g.w < W * 0.98) console.warn(`  pose ${i} rendered at ${g.w}x${g.h}, below the ${W}x${H} viewport (dynamic resolution) - use dev.html for full-res shots`);
+}
+if (at) {
+  let n = 0;
+  for (const spec of at.split(';')) {
+    const v = spec.split(',').map(Number);
+    await page.keyboard.press('Digit6'); await page.waitForTimeout(200);
+    await page.evaluate((v) => { for (let k = 0; k < 5; k++) window.__F[k] = v[k]; }, v);
+    await page.waitForTimeout(settle);
+    save(`at-${++n}.png`, await grab());
+  }
 }
 if (flight) {
   await page.keyboard.press(flightKey);

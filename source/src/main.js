@@ -43,8 +43,8 @@ const tDummy = tex(1, 1, DEPTH, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
 const tDetail = tex(1024, 1024, 'rgba8unorm', TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING, { mips: 11 });
 const tFar = tex(FN, FN, 'rgba8unorm', TU.TEXTURE_BINDING | TU.COPY_DST);
 
-const UB = new Float32Array(60), UBS = new Float32Array(60);
-const ubo = device.createBuffer({ size: 240, usage: BU.UNIFORM | BU.COPY_DST }), uboS = device.createBuffer({ size: 240, usage: BU.UNIFORM | BU.COPY_DST });
+const UB = new Float32Array(80), UBS = new Float32Array(80);
+const ubo = device.createBuffer({ size: 320, usage: BU.UNIFORM | BU.COPY_DST }), uboS = device.createBuffer({ size: 320, usage: BU.UNIFORM | BU.COPY_DST });
 const VF = SS.VERTEX | SS.FRAGMENT;
 const bgl0 = device.createBindGroupLayout({ entries: [
   { binding: 0, visibility: VF, buffer: {} },
@@ -74,7 +74,7 @@ const ibMote = { arrayStride: 16, stepMode: 'instance', attributes: [A(0, 0, 'fl
 
 const scenePipe = (m, vsE, fsE, buffers, o = {}) => device.createRenderPipeline({ layout: pl0,
   vertex: { module: m, entryPoint: vsE, buffers, constants: o.constants },
-  fragment: { module: m, entryPoint: fsE, targets: [{ format: HDR, blend: o.blend }] },
+  fragment: { module: m, entryPoint: fsE, targets: [{ format: HDR, blend: o.blend }, { format: 'r8unorm', writeMask: o.noA ? 0 : 15 }] },
   primitive: { topology: o.strip ? 'triangle-strip' : 'triangle-list', cullMode: o.cull || 'none' },
   depthStencil: { format: DEPTH, depthWriteEnabled: !o.blend, depthCompare: 'greater' }, multisample: { count: AA, alphaToCoverageEnabled: !!o.a2c && AA > 1 } });
 const shadowPipe = (m, vsE, buffers, o = {}) => device.createRenderPipeline({ layout: pl0,
@@ -91,16 +91,25 @@ const pLeaf9 = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, a2c: true, 
 const pLeaf5 = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, a2c: true, constants: { ROWS: 7 } });
 const pLeaf3 = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, a2c: true, constants: { ROWS: 5, FAR: 1500 } });
 const pGrass = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 4, FAR: 60 } });
-const pBird = scenePipe(mAnim, 'vs', 'fs', [vbSolid, ibAnim]);
-const pSky = scenePipe(mSky, 'vs', 'fs', [], { strip: true });
+const pBird = scenePipe(mAnim, 'vs', 'fs', [vbSolid, ibAnim], { noA: 1 });
+const pSky = scenePipe(mSky, 'vs', 'fs', [], { strip: true, noA: 1 });
 const ADD = { color: { srcFactor: 'one', dstFactor: 'one' }, alpha: { srcFactor: 'one', dstFactor: 'one' } };
-const pMote = scenePipe(mSpr, 'vs', 'fs', [ibMote], { strip: true, blend: ADD });
+const pMote = scenePipe(mSpr, 'vs', 'fs', [ibMote], { strip: true, blend: ADD, noA: 1 });
 const pSolidSh = shadowPipe(mSolid, 'vs', [vbSolid, ibSolid]), pUmbSh = shadowPipe(mUmb, 'vs', [ibMote]);
 const pLeafSh = shadowPipe(mLeaf, 'vs', [ibLeaf], { strip: true, fs: 'fsSh', constants: { ROWS: 6 } });
 const mRays = mod(W_RAYS), mPost = mod(W_POST), mRB = mod(W_RBLUR);
 const pRB = device.createRenderPipeline({ layout: 'auto', vertex: { module: mRB, entryPoint: 'vs' }, fragment: { module: mRB, entryPoint: 'fs', targets: [{ format: HDR }] } });
 const pRays = device.createRenderPipeline({ layout: 'auto', vertex: { module: mRays, entryPoint: 'vs' }, fragment: { module: mRays, entryPoint: 'fs', targets: [{ format: HDR }] } });
 const pPost = device.createRenderPipeline({ layout: 'auto', vertex: { module: mPost, entryPoint: 'vs' }, fragment: { module: mPost, entryPoint: 'fs', targets: [{ format: FMT }] } });
+// GTAO + TAA on High and Medium; Low keeps the plain resolve
+const TAA = LV < 2;
+const fsPipe = (code, format) => { const m = mod(code); return device.createRenderPipeline({ layout: 'auto', vertex: { module: m, entryPoint: 'vs' }, fragment: { module: m, entryPoint: 'fs', targets: [{ format }] } }); };
+const pAO = TAA && fsPipe(W_AO, 'rg16float'), pAOB = TAA && fsPipe(W_AOB, 'rg16float'), pTAA = TAA && fsPipe(W_TAA, HDR);
+// 8-phase Halton(2,3) sub-pixel jitter
+const JIT = [];
+for (let i = 1; i <= 8; i++) { const h = (b) => { let f = 1, r = 0, n = i; while (n) { f /= b; r += f * (n % b); n = floor(n / b); } return r; }; JIT.push(h(2) - 0.5, h(3) - 0.5); }
+const PVP = new Float32Array(16);
+let frameN = 0, histReset = 1, ping = 0, pcx = 0, pcy = 0, pcz = 0;
 
 // ---------------------------------------------------------------- sun + shadow matrix over the plaza and the mosque
 {
@@ -229,7 +238,7 @@ Wd.fmap = 0;
 // ---------------------------------------------------------------- render targets (rebuilt on resize)
 const PIXMAX = 2560 * 1440, PIXMIN = mob ? 25e4 : 5e5, DETMIN = 0.4;
 let Wpx = 0, Hpx = 0, DW = 0, DH = 0, pix = +SV[1] || (LV > 1 ? 41e4 : mob ? 1280 * 720 : PIXMAX), det = +SV[2] || 1, dynN = 0, dynT = 0, dynG = 0, dynGN = 0, dynBad = 0, dynOk = 0, dynWait = 3;
-let passScene, passRays, passBlur, bgBlur, passPost, bgRays, bgPost, bloomPass = [], bloomBG = [], targets = [];
+let passScene, passRays, passBlur, bgBlur, passPost, bgRays, bgPost, bloomPass = [], bloomBG = [], targets = [], passAO, passAOB, bgAO, bgAOB, passTAA = [], bgTAA = [], bgPostT = [], bloomBG0 = [];
 const NB = 6;
 function resize() {
   DW = max(2, round(canvas.clientWidth * devicePixelRatio)); DH = max(2, round(canvas.clientHeight * devicePixelRatio));
@@ -242,11 +251,13 @@ function resize() {
   for (const t of targets) t.destroy();
   const tMS = tex(AA > 1 ? Wpx : 1, Hpx, HDR, TU.RENDER_ATTACHMENT, { samples: AA }), tDp = tex(Wpx, Hpx, DEPTH, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING, { samples: AA });
   const tRes = tex(Wpx, Hpx, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING), tRay = tex(Wpx / 2, Hpx / 2, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING), tRay2 = tex(Wpx / 2, Hpx / 2, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
-  targets = [tMS, tDp, tRes, tRay, tRay2];
+  const tAmbMS = tex(AA > 1 ? Wpx : 1, Hpx, 'r8unorm', TU.RENDER_ATTACHMENT, { samples: AA }), tAmb = tex(Wpx, Hpx, 'r8unorm', TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
+  targets = [tMS, tDp, tRes, tRay, tRay2, tAmbMS, tAmb];
   const bl = [];
   for (let i = 0; i < NB; i++) { const t = tex(max(1, Wpx >> (i + 1)), max(1, Hpx >> (i + 1)), HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING); bl.push(t); targets.push(t); }
   const vDp = tDp.createView(), vRes = tRes.createView(), vRay = tRay.createView(), vRay2 = tRay2.createView(), vBl = bl.map((t) => t.createView());
-  passScene = { colorAttachments: [{ view: AA > 1 ? tMS.createView() : vRes, resolveTarget: AA > 1 ? vRes : undefined, loadOp: 'clear', storeOp: AA > 1 ? 'discard' : 'store', clearValue: [0, 0, 0, 1] }],
+  passScene = { colorAttachments: [{ view: AA > 1 ? tMS.createView() : vRes, resolveTarget: AA > 1 ? vRes : undefined, loadOp: 'clear', storeOp: AA > 1 ? 'discard' : 'store', clearValue: [0, 0, 0, 1] },
+    { view: AA > 1 ? tAmbMS.createView() : tAmb.createView(), resolveTarget: AA > 1 ? tAmb.createView() : undefined, loadOp: 'clear', storeOp: AA > 1 ? 'discard' : 'store', clearValue: [0, 0, 0, 0] }],
     depthStencilAttachment: { view: vDp, depthClearValue: 0, depthLoadOp: 'clear', depthStoreOp: 'store' } };
   passRays = { colorAttachments: [colorAtt(vRay, true)] };
   passBlur = { colorAttachments: [colorAtt(vRay2, true)] };
@@ -258,6 +269,24 @@ function resize() {
     { binding: 3, resource: vRay2 }, { binding: 4, resource: vBl[0] }, { binding: 5, resource: vDp }] });
   bloomPass = []; bloomBG = [];
   for (let i = 0; i < NB; i++) { bloomPass.push({ colorAttachments: [colorAtt(vBl[i], true)] }); bloomBG.push(blitBG(i ? vBl[i - 1] : vRes)); }
+  if (TAA) {
+    const tAO = tex(Wpx / 2, Hpx / 2, 'rg16float', TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING), tAO2 = tex(Wpx / 2, Hpx / 2, 'rg16float', TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
+    const tH = [0, 1].map(() => tex(Wpx, Hpx, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING)), vH = tH.map((t) => t.createView());
+    targets.push(tAO, tAO2, ...tH);
+    passAO = { colorAttachments: [colorAtt(tAO.createView(), true)] }; passAOB = { colorAttachments: [colorAtt(tAO2.createView(), true)] };
+    bgAO = device.createBindGroup({ layout: pAO.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: vDp }] });
+    bgAOB = device.createBindGroup({ layout: pAOB.getBindGroupLayout(0), entries: [{ binding: 0, resource: tAO.createView() }] });
+    // ping k writes history k from history 1 - k; bloom and the composite then read history k
+    for (let k = 0; k < 2; k++) {
+      passTAA[k] = { colorAttachments: [colorAtt(vH[k], true)] };
+      bgTAA[k] = device.createBindGroup({ layout: pTAA.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: sClamp }, { binding: 2, resource: vRes },
+        { binding: 3, resource: tAmb.createView() }, { binding: 4, resource: tAO2.createView() }, { binding: 5, resource: vDp }, { binding: 6, resource: vH[1 - k] }] });
+      bgPostT[k] = device.createBindGroup({ layout: pPost.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: ubo } }, { binding: 1, resource: sClamp }, { binding: 2, resource: vH[k] },
+        { binding: 3, resource: vRay2 }, { binding: 4, resource: vBl[0] }, { binding: 5, resource: vDp }] });
+      bloomBG0[k] = blitBG(vH[k]);
+    }
+    histReset = 1;
+  }
   for (let i = NB - 1; i > 0; i--) { bloomPass.push({ colorAttachments: [colorAtt(vBl[i - 1], false)] }); bloomBG.push(blitBG(vBl[i])); }
   UB[52] = Wpx; UB[53] = Hpx; UB[54] = 1 / Wpx; UB[55] = 1 / Hpx;
 }
@@ -349,6 +378,16 @@ function render() {
   m[40] = ux; m[41] = uy; m[42] = uz; m[43] = TANH;
   m[44] = fx; m[45] = fy; m[46] = fz; m[47] = NEAR_;
   m[56] = EXPO; m[57] = RAYS; m[58] = det; m[59] = F[UMC];
+  if (TAA) {
+    // the history is reprojected with last frame's unjittered matrix, then this frame's matrix is jittered
+    if ((cx - pcx) ** 2 + (cy - pcy) ** 2 + (cz - pcz) ** 2 > 2500) histReset = 1;
+    pcx = cx; pcy = cy; pcz = cz;
+    for (let i = 0; i < 16; i++) { m[60 + i] = histReset ? m[i] : PVP[i]; PVP[i] = m[i]; }
+    const j = (frameN & 7) * 2, jx = JIT[j] / Wpx, jy = JIT[j + 1] / Hpx;
+    for (let c = 0; c < 4; c++) { m[c * 4] += jx * m[c * 4 + 3]; m[c * 4 + 1] += jy * m[c * 4 + 3]; }
+    m[76] = jx; m[77] = jy; m[78] = histReset; m[79] = frameN & 1023;
+    histReset = 0; frameN++; ping ^= 1;
+  }
   Q.writeBuffer(ubo, 0, UB);
 
   { let cr = floor((cz - OZ) / CELLW) | 0; cr = cr < 0 ? 0 : cr > CELLS - 1 ? CELLS - 1 : cr; let n = 0; rowOrd[n++] = cr; for (let d = 1; d < CELLS; d++) { if (cr - d >= 0) rowOrd[n++] = cr - d; if (cr + d < CELLS) rowOrd[n++] = cr + d; } }
@@ -374,13 +413,18 @@ function render() {
   r.setPipeline(pSky); r.draw(4);
   r.setPipeline(pMote); r.setVertexBuffer(0, ibMotes); r.draw(4, nMotes);
   r.end();
+  if (TAA) {
+    r = e.beginRenderPass(passAO); r.setPipeline(pAO); r.setBindGroup(0, bgAO); r.draw(3); r.end();
+    r = e.beginRenderPass(passAOB); r.setPipeline(pAOB); r.setBindGroup(0, bgAOB); r.draw(3); r.end();
+    r = e.beginRenderPass(passTAA[ping]); r.setPipeline(pTAA); r.setBindGroup(0, bgTAA[ping]); r.draw(3); r.end();
+  }
   r = e.beginRenderPass(passRays); r.setPipeline(pRays); r.setBindGroup(0, bgRays); r.draw(3); r.end();
   r = e.beginRenderPass(passBlur); r.setPipeline(pRB); r.setBindGroup(0, bgBlur); r.draw(3); r.end();
   for (let i = 0; i < bloomPass.length; i++) {
-    r = e.beginRenderPass(bloomPass[i]); r.setPipeline(i === 0 ? pDown0 : i < NB ? pDown : pUp); r.setBindGroup(0, bloomBG[i]); r.draw(3); r.end();
+    r = e.beginRenderPass(bloomPass[i]); r.setPipeline(i === 0 ? pDown0 : i < NB ? pDown : pUp); r.setBindGroup(0, TAA && !i ? bloomBG0[ping] : bloomBG[i]); r.draw(3); r.end();
   }
   passPost.colorAttachments[0].view = ctx.getCurrentTexture().createView();
-  r = e.beginRenderPass(passPost); r.setPipeline(pPost); r.setBindGroup(0, bgPost); r.draw(3); r.end();
+  r = e.beginRenderPass(passPost); r.setPipeline(pPost); r.setBindGroup(0, TAA ? bgPostT[ping] : bgPost); r.draw(3); r.end();
   if (slot) { e.resolveQuerySet(qs, 0, 2, qResolve, 0); e.copyBufferToBuffer(qResolve, 0, slot.b, 0, 16); }
   submitList[0] = e.finish();
   Q.submit(submitList);
