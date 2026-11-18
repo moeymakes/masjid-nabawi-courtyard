@@ -117,9 +117,14 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
     lose rib structure from the air, night canopy gloom and navy gaps, blocky artefacts in canopy gaps (t1 pose 3),
     pose-2 cloud, minaret ring glow, roof tone. City monotony dropped from major to minor.
   - Ship rule NOT met: the fix-loop cap (4) is spent and one remaining major is in scope. Not shipped; branch
-    realism-s3 pushed with the build. Asked the starting session whether to ship anyway.
-    If shipping: `git push origin realism-s3:main`, poll live until byte-identical, README screenshots from
-    verify/s3-9-t0. If not: the next lever is #6, light variation per building/floor instead of per window.
+    realism-s3 pushed with the build. Asked the starting session whether to ship anyway: HOLD (2026-11-19, the
+    night-window major is stage 3's own work). realism-s3 stays unshipped at ccba6ca; live stays stage 2. Moey can
+    override: `git push origin realism-s3:main`, poll live until byte-identical, README screenshots from
+    verify/s3-9-t0.
+  - Next fix for #6 (not started): in the city-window emission (shaders.js, mat 17), vary light per building and
+    per floor instead of per window: take the dim level and the warm/cool choice from `hs(sd)` (building) and
+    `hs(flr + sd)` (floor), keep per-window only the binary lit/unlit; keep the 1.0x ceiling (night aerial clip).
+    Then re-capture all three Times, gates, one critic.
   - Contact sheet /home/moey/Dev/reports/masjid-nabawi-courtyard-realism-2026-11-19.jpg (rows: dawn, golden,
     night; each original live build s0-base above the stage 3 candidate s3-9). Worldsmith learnings appended.
   - Next: stage 2 on branch realism-s2 (from main). Sources found so far for the umbrellas: SL Rasch project page
