@@ -5,6 +5,26 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
 
 ## State (update after every step)
 
+- Realism stages 1-3 (2026-11-18, from 16:15 AEDT; brief: side-session notes `realism-stages-brief.md`). Branch
+  `realism-s1`. Captures verify/s1-<step>-t<0|1|2>/ (1920x1080); helper scripts cap.sh / met.sh / sheet.py /
+  gates.sh in the session scratchpad. Hero crop = `--crop 0,.3,1,1` on all six poses x three times (no city here:
+  the plaza, canopies, facade and minaret are the subject).
+  - Baseline (main 7c62ca2, verify/s0-base-*): clip .13 (max .78), flatwhite 13.53 (max 50.4, night canopies),
+    brightdetail 15.43 (gate >= 17.7).
+  - 1 8cf724c GTAO + TAA (port of Madinah af664e0), renders, 0 errors.
+  - 2 aeee346 Hillaire sky + aerial perspective (port of 83eccb1 + 8977469), dawn rose band and night city glow
+    kept over the LUT: flatwhite 11.04, brightdetail 18.59.
+  - 3 cb67aef albedo/weathering/night pass: flatwhite 2.45 (dawn 5.4, golden 1.9, night .07), brightdetail 20.86
+    (+35%), clip .08 (max .38). Remaining flat white = dawn pose 2 (sunlit minaret shaft, 11.8) and pose 5
+    (sunlit east facade, 11.4): stone squarely facing the sunrise; hero modelling in stage 2 is the lever.
+  - Deferred from stage 1, by design: interior-mapped windows, district tint and a static city shadow map. The
+    city here is only distant background (pose 6); it gets real OSM layout in stage 3, so it is done there once.
+  - Gates on cb67aef (verify/s1-g1-*): PASS perf GPU 4.64 avg / 8.62 p99 ms (2560x1440 High, 60 s flight; base 5.21 /
+    9.27). PASS 0 console errors, index.html at 3 times x High/Medium/Low. PASS menu-preview phone/tablet/desktop.
+    PASS size 112.4 kB. PASS clip (max .38) and brightdetail (+35%). FAIL flatwhite < 2 per pose: dawn poses 2 and 5
+    (sunlit stone facing the sunrise); mean over the 18 shots is 2.45 vs 13.53 live.
+  - Critic: one per stage, not one per feature (5-hour usage window was at 71% with six sessions sharing it).
+
 - Phase: 7 (delivered). Critic loop stopped by the brief's rule: 6 critic iterations (iter-02 .. iter-07), highest
   severity still "major" in every one. Gate 1 is NOT passed; gate 2 (perf) passes.
 - Final capture: verify/iter-07 (dev.html, 2560x1440, 0 console errors). index.html captured at High
