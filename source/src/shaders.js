@@ -303,8 +303,8 @@ const GND = ${TP.gnd}; const LIGHTS = ${TP.lights}; const LITF = ${TP.litf}; con
 const TAU = 6.2831853;
 const LOW = ${LV > 1};
 const FAC = ${FAC}.; const MZ0 = ${MZ0}.; const MZ1 = ${MZ1}.; const ROOF = ${ROOF}.;
-const UX0 = ${UX0}.; const UZ0 = ${UZ0}.; const USP = ${USP}.; const UNX = ${UNX}.; const UNZ = ${UNZ}.;
-const UGATE = vec2f(${UGATE[0]}., ${UGATE[1]}.); const UDUR = 20.; const UR = 13.3; const UH = 13.75;
+const UX0 = ${UX0}.; const UZ0 = ${UZ0}.; const USP = ${USP.toFixed(2)}; const UNX = ${UNX}.; const UNZ = ${UNZ}.;
+const UGATE = vec2f(${UGATE[0]}., ${UGATE[1]}.); const UDUR = 20.; const UR = 13.25; const UH = 12.2; const UHD = .9;
 const ARCX = vec2f(${ARCX[0]}., ${ARCX[1]}.); const ARCZ = vec2f(${ARCZ[0]}., ${ARCZ[1]}.);
 fn sat(x: f32) -> f32 { return clamp(x, 0., 1.); }
 fn ss(a: f32, b: f32, x: f32) -> f32 { let t = clamp((x - a) / (b - a), 0., 1.); return t * t * (3. - 2. * t); }
@@ -326,7 +326,7 @@ fn uCell(p: vec2f) -> vec4f {
   let ij = clamp(round((p - vec2f(UX0, UZ0)) / USP), vec2f(0.), vec2f(UNX - 1., UNZ - 1.));
   return vec4f(p - vec2f(UX0, UZ0) - ij * USP, ij);
 }
-fn uDelay(ij: vec2f) -> f32 { if (ij.x < .5 && ij.y > 6.5 && ij.y < 9.5) { return 1e4; } return distance(vec2f(UX0, UZ0) + ij * USP, UGATE) / 10. + 1.5 * fract(ij.x * .618034 + ij.y * .414214); }
+fn uDelay(ij: vec2f) -> f32 { if (ij.x < .5 && ij.y > 7.5 && ij.y < 10.5) { return 1e4; } return distance(vec2f(UX0, UZ0) + ij * USP, UGATE) / 10. + 1.5 * fract(ij.x * .618034 + ij.y * .414214); }
 fn uOpen(clk: f32, delay: f32) -> f32 { let t = sat((clk - delay) / UDUR); return t * t * (3. - 2. * t); }
 `;
 
@@ -393,7 +393,7 @@ fn shadow9(p: vec3f) -> f32 {
 // how much open sky a point sees: less under an open canopy, at the foot of a column, by the facade, in the arcade
 fn skyOcc(p: vec3f) -> f32 {
   let u = uCell(p.xz);
-  let inside = (1. - ss(10.5, 13.5, max(abs(u.x), abs(u.y)))) * ss(16., 13.5, p.y);
+  let inside = (1. - ss(12.5, 14., max(abs(u.x), abs(u.y)))) * ss(16., 13.5, p.y);
   var o = 1. - .3 * uOpen(g.mis.w, uDelay(u.zw)) * inside;
   o *= mix(.78, 1., ss(.9, 2.8, length(u.xy) + p.y * .4));
   let fz = step(MZ0, p.z) * step(p.z, MZ1);
@@ -525,7 +525,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
     let t = (15. - p.y) / R.y;
     if (t < tm) {
       let q = p + R * t; let u = uCell(q.xz);
-      let k = uOpen(g.mis.w, uDelay(u.zw)) * (1. - ss(10.5, 13.5, max(abs(u.x), abs(u.y)))) * ss(200., 40., t);
+      let k = uOpen(g.mis.w, uDelay(u.zw)) * (1. - ss(12.5, 14., max(abs(u.x), abs(u.y)))) * ss(200., 40., t);
       col = mix(col, vec3f(.95, .84, .70) * mix(.9, .3, NIGHT), k);
     }
   }
@@ -702,7 +702,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   let E = SUNC * sh;
   let ndl = sat(dot(N, L));
   let uc = uCell(i.wp.xz);
-  let under = uOpen(g.mis.w, uDelay(uc.zw)) * (1. - ss(11., 14., max(abs(uc.x), abs(uc.y)))) * ss(15.5, 12., i.wp.y) * f32(!far);
+  let under = uOpen(g.mis.w, uDelay(uc.zw)) * (1. - ss(12.5, 14., max(abs(uc.x), abs(uc.y)))) * ss(15.5, 12., i.wp.y) * f32(!far);
   let am = (amb(N, so) + (AMBC * vec3f(.95, .86, .74) * .42 + vec3f(1., .78, .5) * .06 * NIGHT) * under * sat(N.y * .5 + .6)) * ao;
   var c = alb * (E * ndl + am) + emi;
   if (NIGHT > .5 && !far) { c += alb * nightLights(i.wp, N) * vao; }
@@ -726,17 +726,18 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
 
 // ---------------------------------------------------------------- umbrella membranes, opening in the vertex shader
 // Each instance (x, z, delay, seed) draws a 64 x 14 grid of the membrane around its column head. Closed, the arms
-// stand up in a slim pleated bud about 21 m tall; opening, they swing out and down while the fabric stretches into
-// a square tulip 25.5 m across, corners highest. The shadow pass uses the same vertex shader.
+// stand up in a slim pleated bud 21.7 m tall; opening, they swing out and down while the fabric stretches into a
+// square tulip 25.5 m across, corners highest. Neighbours alternate between two heights (corners at 14.4 and 15.3 m,
+// SL Rasch) on a 24.5 m grid, so the membranes overlap into one continuous canopy. The shadow pass uses this too.
 const W_UMB = S_B + /*wgsl*/`
 struct UO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n: vec3f, @location(2) uv: vec2f, @location(3) @interpolate(flat) k: vec2f };
 const NA = 64.; const NR = 14.;
-fn mem(a: f32, s: f32, e: f32, sd: f32) -> vec3f {
+fn mem(a: f32, s: f32, e: f32, sd: f32, h: f32) -> vec3f {
   let L = UR / max(abs(cos(a)), abs(sin(a))); let cn = sat((L - UR) / (UR * .4142));
   let sg = sin(4. * a);
-  let ro = .7 + s * (L - .7); let vo = .25 + (1. + .35 * sd) * pow(s, 1.25) + (.75 + .4 * fract(sd * 7.3)) * s * s * cn - .2 * s * sg * sg;
+  let ro = .7 + s * (L - .7); let vo = .25 + (1. + .1 * sd) * pow(s, 1.25) + (.85 + .1 * fract(sd * 7.3)) * s * s * cn - .2 * s * sg * sg;
   let rc = (.3 + .7 * pow(max(sin(3.1416 * min(s * 1.06, 1.)), 0.), .7) * (1. - .35 * s)) * (.42 + .58 * pow(abs(cos(4. * a)), 1.5));
-  let vc = .45 + s * 7.3;
+  let vc = .45 + s * (21.25 - h);
   let po = atan2(ro, vo); let pc = atan2(rc, vc);
   let l = mix(length(vec2f(rc, vc)), length(vec2f(ro, vo)), e); let p = mix(pc, po, e);
   return vec3f(cos(a) * sin(p) * l, cos(p) * l, sin(a) * sin(p) * l);
@@ -749,9 +750,10 @@ fn mem(a: f32, s: f32, e: f32, sd: f32) -> vec3f {
   let a = (f32(q % 64u) + du) / NA * TAU; let s = pow((f32(q / 64u) + dv) / NR, .85);
   let t = sat((g.mis.w - ins.z) / UDUR); let e = t * t * (3. - 2. * t);
   let s1 = max(s, .02);
-  let P = mem(a, s, e, ins.w); let P1 = mem(a, s1, e, ins.w);
-  let n = normalize(cross(mem(a + .01, s1, e, ins.w) - P1, mem(a, s1 + .01, e, ins.w) - P1));
-  let w = vec3f(ins.x, UH, ins.y) + P;
+  let h = UH + UHD * f32((i32(round((ins.x - UX0) / USP)) + i32(round((ins.y - UZ0) / USP))) & 1);
+  let P = mem(a, s, e, ins.w, h); let P1 = mem(a, s1, e, ins.w, h);
+  let n = normalize(cross(mem(a + .01, s1, e, ins.w, h) - P1, mem(a, s1 + .01, e, ins.w, h) - P1));
+  let w = vec3f(ins.x, h, ins.y) + P;
   o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = n; o.uv = vec2f(a, s); o.k = vec2f(e, ins.w);
   return o;
 }
@@ -773,7 +775,7 @@ fn mem(a: f32, s: f32, e: f32, sd: f32) -> vec3f {
   let ndl = abs(dot(ng, L));
   let lit = select(.3, 1., select(-1., 1., top) == sunSide);
   let so = skyOcc(i.wp + n * 1.5);
-  var alb = vec3f(.78, .77, .745) * (1. - .2 * seam) * (.97 + .06 * h2(vec2f(floor(a / TAU * 32.), i.k.y * 91.)));
+  var alb = mix(vec3f(.78, .77, .745), vec3f(.62, .52, .40), .55 * seam) * (.97 + .06 * h2(vec2f(floor(a / TAU * 32.), i.k.y * 91.)));
   // light bounced up from the marble: it follows the sun and sky, so at night only the floodlit floor feeds it
   let bounce = vec3f(.98, .86, .70) * .4 * mix(1., .12, NIGHT) * sat(-n.y) * mix(.6, 1., e);
   var c = alb * (Es * ndl * lit + amb(n, so) + bounce);

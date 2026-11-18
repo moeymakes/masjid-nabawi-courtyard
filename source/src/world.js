@@ -9,7 +9,8 @@
 const SUN = (() => { const v = TP.sun; const l = hypot(...v); return v.map((c) => c / l); })();
 const FAC = -90, MZ0 = -210, MZ1 = 200, MX0 = -330, ROOF = 19;
 // umbrella field: columns at x0 + i*sp, z0 + j*sp; they open as a wave spreading from the main gate
-const UX0 = -72, UZ0 = -237, USP = 27, UNX = 6, UNZ = 18, UGATE = [-88, -20];
+// 24.5 m grid under 25.5 m canopies: neighbours overlap (SL Rasch: 600 m2 of shade each, two heights)
+const UX0 = -72, UZ0 = -237, USP = 24.5, UNX = 7, UNZ = 19, UGATE = [-88, -20];
 // east gates: z centre, width, height, main
 const GATES = [[-20, 16, 18.5, 1], [-128, 10, 13.5, 0], [88, 10, 13.5, 0]];
 // Saudi-era minarets (about 100 m): the four on the east side are close to the plaza, the rest frame the roof
@@ -19,7 +20,7 @@ const ARCX = [92, 100], ARCZ = [-224, 216];
 const BED = [103, 131, -226, 220];
 // viewpoints: x, eye height above the floor (absolute y when flying), z, look-at x, y, z, flying
 const POSES = [
-  [62, 1.7, 56, -116, 26, 120, 0],
+  [62, 1.7, 63, -116, 26, 120, 0],
   [-64, 1.7, -6, -89, 56, 10, 0],
   [-60, 1.7, -96, 100, 9, -66, 0],
   [96, 1.7, -150, 96.3, 3.3, 0, 0],
@@ -33,11 +34,11 @@ const FLY = new Float32Array([
   -4.5, 3, 30, -90, 10, -20,
   -58.5, 2.8, -8, -90, 9, -20,
   -66, 3, -12, -89, 38, 10,
-  -58.5, 4, 30, -40, 8, 120,
-  -58.5, 4, 100.5, 0, 6, 140,
-  -31.5, 4, 114, 40, 5, 140,
-  -4.5, 4, 122, 96, 4, 140,
-  76.5, 3.5, 124.5, 96, 3, 123.5,
+  -59.75, 4, 30, -40, 8, 120,
+  -59.75, 4, 112, 0, 6, 140,
+  -35.25, 4, 112, 40, 5, 140,
+  -10.75, 4, 112, 96, 4, 140,
+  76.5, 3.5, 112, 96, 3, 123.5,
   84, 3, 123.5, 100, 3, 120,
   92.5, 3, 123.5, 100, 3, 110,
   96, 3, 115, 96, 3, 0,
@@ -363,17 +364,21 @@ function makeWorld(FAR, flyPts) {
   solid(fin, OLDMIN[0], 64.3, OLDMIN[1], 1.25, Q0, 10, 0);
 
   // --- the umbrellas: white columns on stone plinths; the membranes are W_UMB, opening by the shader
-  const col = new Mesh();
-  box(col, -.78, 0, -.78, .78, 1.05, .78, .85);
-  box(col, -.84, .95, -.84, .84, 1.12, .84);
-  lathe(col, [[.46, 1.12], [.42, 2.5], [.37, 12.6], [.5, 13.15], [.72, 13.45], [.72, 13.75], [.3, 13.95]], 14);
-  const colId = add(col), umbs = [];
+  // two column heights: the hub sits at 12.2 or 13.1 m (UH, UH + UHD in the shader), alternating like a chessboard
+  const colM = (h) => {
+    const col = new Mesh();
+    box(col, -.78, 0, -.78, .78, 1.05, .78, .85);
+    box(col, -.84, .95, -.84, .84, 1.12, .84);
+    lathe(col, [[.46, 1.12], [.42, 2.5], [.37, h - 1.15], [.5, h - .6], [.72, h - .3], [.72, h], [.3, h + .2]], 14);
+    return add(col);
+  };
+  const colIds = [colM(12.2), colM(13.1)], umbs = [];
   rseed(20);
   for (let j = 0; j < UNZ; j++) for (let i = 0; i < UNX; i++) {
     const x = UX0 + i * USP, z = UZ0 + j * USP;
     // the forecourt of the main gate and its two minarets is left open
-    if (i === 0 && j >= 7 && j <= 9) continue;
-    solid(colId, x, 0, z, 1, Q0, 24, rnd());
+    if (i === 0 && j >= 8 && j <= 10) continue;
+    solid(colIds[(i + j) & 1], x, 0, z, 1, Q0, 24, rnd());
     CC.push(x, z, 1.1, 14);
     umbs.push(x, z, hypot(x - UGATE[0], z - UGATE[1]) / 10 + 1.5 * fract(i * .618034 + j * .414214), rnd());
   }
