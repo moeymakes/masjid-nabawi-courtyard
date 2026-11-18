@@ -166,6 +166,12 @@ keep('nabawiLoad', 1);
 addEventListener('pagehide', () => keep('nabawiLoad', ''));
 // the ground model on the GPU, read back: [height, basalt, granite, wadi] and [city, groves] per grid point
 const pGround = device.createComputePipeline({ layout: 'auto', compute: { module: mod(W_GROUND), entryPoint: 'main' } });
+// real relief patches for the ground model (data.js), metres above the city's 610 m
+const demBuf = (() => {
+  const a = new Float32Array(DEM_UHUD.w * DEM_UHUD.h + DEM_AYR.w * DEM_AYR.h); let o = 0;
+  for (const P of [DEM_UHUD, DEM_AYR]) { const b = atob(P.b64); for (let i = 0; i < b.length; i++) a[o++] = b.charCodeAt(i) * P.step + P.base - 610; }
+  return buf(a, BU.STORAGE);
+})();
 async function ground(n, ox, oz, cell) {
   const u = new ArrayBuffer(32), uu = new Uint32Array(u), uf = new Float32Array(u);
   uu[0] = n; uu[1] = n; uf[4] = ox; uf[5] = oz; uf[6] = cell;
@@ -173,7 +179,7 @@ async function ground(n, ox, oz, cell) {
   const ba = device.createBuffer({ size, usage: BU.STORAGE | BU.COPY_SRC }), bb = device.createBuffer({ size, usage: BU.STORAGE | BU.COPY_SRC });
   const ra = device.createBuffer({ size, usage: BU.MAP_READ | BU.COPY_DST }), rb = device.createBuffer({ size, usage: BU.MAP_READ | BU.COPY_DST });
   const e = device.createCommandEncoder(), c = e.beginComputePass();
-  c.setPipeline(pGround); c.setBindGroup(0, device.createBindGroup({ layout: pGround.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: bu } }, { binding: 1, resource: { buffer: ba } }, { binding: 2, resource: { buffer: bb } }] }));
+  c.setPipeline(pGround); c.setBindGroup(0, device.createBindGroup({ layout: pGround.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: bu } }, { binding: 1, resource: { buffer: ba } }, { binding: 2, resource: { buffer: bb } }, { binding: 3, resource: { buffer: demBuf } }] }));
   c.dispatchWorkgroups(n / 8, n / 8); c.end();
   e.copyBufferToBuffer(ba, 0, ra, 0, size); e.copyBufferToBuffer(bb, 0, rb, 0, size);
   Q.submit([e.finish()]);
