@@ -29,7 +29,7 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
     Strengths to keep: arcade perspective (pose 4), facade voussoirs + brass (pose 5), canopy rhythm, golden aerial.
   - 4 a030a57 fix loop 1: visible sky dome x1.6 dawn / x1.3 golden (LUT still drives ambient + aerial), night
     expo 1.8 -> 1.4. Hero crop: flatwhite 2.50, brightdetail 25.68 (+66% vs live), clip .09 (max .37). Gate sweep
-    on it: verify/s1-g2-* (running when the session paused).
+    on it (verify/s1-g2-*): GPU 4.60 / 9.46 ms, 0 errors at 3 times x 3 levels, menu ok, 112.5 kB.
   - PAUSED 2026-11-18 ~17:00 AEDT at 82% of the 5-hour window; one-shot resume armed for 20:07 AEDT.
     Next: fix loop 2 (pose-3 sun glint smear on the marble; night lamp pools + warm floodlight gradient on the
     facade), critic round 2, ship stage 1 if the ship rule allows (fix-loop cap 4), then stage 2.
