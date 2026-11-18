@@ -23,6 +23,16 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
     9.27). PASS 0 console errors, index.html at 3 times x High/Medium/Low. PASS menu-preview phone/tablet/desktop.
     PASS size 112.4 kB. PASS clip (max .38) and brightdetail (+35%). FAIL flatwhite < 2 per pose: dawn poses 2 and 5
     (sunlit stone facing the sunrise); mean over the 18 shots is 2.45 vs 13.53 live.
+  - Critic round 1 (Sonnet, on cb67aef; highest major). In-scope majors: dawn sky navy and blotchy (pose 2), pose-3
+    floor glare smear toward the sun, night reads as overcast day (no lamp pools, no floodlight gradient). Out of
+    stage-1 scope: aerial city boxes / roof slab / identical domes (stage 2-3), umbrella field edge.
+    Strengths to keep: arcade perspective (pose 4), facade voussoirs + brass (pose 5), canopy rhythm, golden aerial.
+  - 4 a030a57 fix loop 1: visible sky dome x1.6 dawn / x1.3 golden (LUT still drives ambient + aerial), night
+    expo 1.8 -> 1.4. Hero crop: flatwhite 2.50, brightdetail 25.68 (+66% vs live), clip .09 (max .37). Gate sweep
+    on it: verify/s1-g2-* (running when the session paused).
+  - PAUSED 2026-11-18 ~17:00 AEDT at 82% of the 5-hour window; one-shot resume armed for 20:07 AEDT.
+    Next: fix loop 2 (pose-3 sun glint smear on the marble; night lamp pools + warm floodlight gradient on the
+    facade), critic round 2, ship stage 1 if the ship rule allows (fix-loop cap 4), then stage 2.
   - Critic: one per stage, not one per feature (5-hour usage window was at 71% with six sessions sharing it).
 
 - Phase: 7 (delivered). Critic loop stopped by the brief's rule: 6 critic iterations (iter-02 .. iter-07), highest
