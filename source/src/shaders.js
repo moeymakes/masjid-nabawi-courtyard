@@ -810,7 +810,13 @@ fn grassSway(p: vec2f, h: f32, t: f32) -> vec2f {
   var col = vec3f(0.); var pr = vec4f(0.); var shp = 0.; var fold = 0.;
   let palm = ty == 0 || ty == 1 || ty == 5;
   switch ty {
-    case 0 { col = mix(vec3f(.09, .13, .045), vec3f(.17, .18, .07), s1); pr = vec4f(1., .4, 0., 0.); fold = .5; }
+    case 0 {
+      // date palm fronds are glaucous grey-green, not lime; each palm (keyed by its crown) has its own tint and
+      // its own share of yellowing fronds (port of Madinah ac0180e)
+      let ph = hs(i.a.x * .37 + i.a.z * .71);
+      col = mix(vec3f(.12, .135, .09), vec3f(.2, .21, .15), s1) * mix(vec3f(.9, .97, 1.06), vec3f(1.1, 1., .78), ph);
+      col = mix(col, vec3f(.30, .22, .11) * (.8 + .4 * s1), step(s2, ph * .22) * .75);
+      pr = vec4f(1., .4, 0., 0.); fold = .5; }
     case 1 { col = mix(vec3f(.20, .14, .075), vec3f(.28, .20, .10), s1); pr = vec4f(1., .3, 0., 0.); fold = .3; }
     case 2 { col = mix(vec3f(.11, .15, .06), vec3f(.20, .22, .09), s1); pr = vec4f(0., .8, 0., 0.); }
     case 3 { col = mix(vec3f(.20, .21, .14), vec3f(.28, .23, .13), s1); pr = vec4f(0., .4, 0., 0.); }
@@ -861,12 +867,14 @@ fn leafCov(i: LO) -> f32 {
   let E = SUNC * mix(shadow1(i.wp + L * .6), 1., .3);
   let ndl = dot(n, L);
   var alb = i.col * (.7 + .3 * ss(0., .3, abs(i.uv.x))) * mix(.75, 1.1, i.uv.y) * (.6 + .8 * lt.b) * (.75 + .5 * lt.a);
+  // sun-dried tips on palm fronds
+  alb = mix(alb, vec3f(.24, .17, .09) * (.8 + .4 * lt.a), ss(.8, 1., i.uv.y) * (.25 + .55 * i.sd.y) * step(.5, i.pr.x));
   let tr = (max(-ndl, 0.) * .9 + .25) * i.pr.y;
-  let trc = alb * vec3f(1., 1.02, .6);
+  let trc = alb * vec3f(1.05, 1.3, .75);
     let am = (amb(n, so) + amb(-n, so) * i.pr.y * .45) * (.35 + .65 * so);
   var c = E * (alb * max(ndl, 0.) + trc * tr) + alb * am;
   let H = normalize(V + L);
-  c += E * pow(sat(dot(n, H)), 30.) * .25;
+  c += E * pow(sat(dot(n, H)), 18.) * .12;
   c += E * trc * i.pr.y * pow(sat(dot(-V, L)), 4.) * .8;
   return outA(c, alb * am, alb, i.wp, alpha);
 }
@@ -930,6 +938,21 @@ struct VO { @builtin(position) cp: vec4f, @location(0) d: vec3f };
     let cov_ = ss(.6, .86, n) * ss(.03, .2, rd.y) * (1. - ss(.35, .9, rd.y));
     let lit = (CLOUDSUN * (.05 + .45 * pow(max(mu, 0.), 4.)) + g.amb.xyz * .9) * (.75 + .5 * fbm(vec3f(r * 7., 2.), 2));
     c = mix(c, lit, cov_ * .45);
+  }
+  // scattered altocumulus 3 km up (port of Madinah 02909b3): fbm density on the cloud plane, self-shadowed toward the
+  // sun, lit by the sun as it is at that height plus sky light, fading into the sky with distance; lifted with the dome
+  if (rd.y > .008) {
+    let tpl = (3000. - g.cam.y) / rd.y;
+    let pp = g.cam.xz + rd.xz * tpl;
+    let uv = pp * .00013 + vec2f(g.cam.w * .0008, g.cam.w * .0003);
+    let dn = fbm(vec3f(uv, 4.2), 5) + .25 * (fbm(vec3f(uv * 3.3, 7.7), 3) - .5);
+    let cv = ss(.57, .76, dn) * ss(.008, .06, rd.y) * ss(70000., 20000., tpl);
+    if (cv > .001) {
+      let dl = fbm(vec3f(uv + normalize(L.xz) * .05, 4.2), 4);
+      let sh = exp(-ss(.5, .85, dl) * 2.4);
+      let lit = (CLOUDSUN * (.22 + 1.1 * pow(max(mu, 0.), 4.)) * sh + g.amb.xyz * (.8 + .4 * ss(.6, .9, dn))) * ${[2.6, 1.3, 1][TOD]};
+      c = mix(c, mix(lit, c, ss(15000., 70000., tpl) * .7), cv * .92);
+    }
   }
   c += mix(SUNC * 9., vec3f(2.4, 2.4, 2.2), NIGHT) * ss(mix(.99988, .99975, NIGHT), mix(.99994, .99982, NIGHT), mu);
   // stars: one soft point per sky cell, a pixel or two wide, so they hold still as the camera moves

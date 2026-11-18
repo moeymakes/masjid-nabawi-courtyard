@@ -458,6 +458,10 @@ function makeWorld(FAR, flyPts) {
       leaf(big, cx, cy + .25, cz, len, off + f * 2.39996 + rr(-.12, .12), tilt, .42 * len / 4, H, 0, rnd(), rnd(), clamp(mix(.38, 1, t) + rr(-.1, .1), 0, 1));
     }
     if (!young) for (let f = 2 + (rnd() * 3 | 0); f > 0; f--) leaf(big, cx, cy - .3, cz, rr(2.6, 3.6), rnd() * TAU, rr(2.5, 2.9), .28, H, 1, rnd(), rnd(), .3);
+    // a fuller skirt of dead fronds on tall untended palms, from a position hash so the shared random stream (and
+    // with it the layout of everything placed after this palm) stays unchanged (port of Madinah ac0180e)
+    const hr = (k) => { const v = sin(x * 12.9898 + z * 78.233 + k * 37.719) * 43758.5453; return v - floor(v); };
+    if (!young && H > 9) for (let f = (hr(0) * 5) | 0; f > 0; f--) leaf(big, cx, cy - .4 - hr(f) * .6, cz, 2.6 + hr(f + 9) * 1.2, hr(f + 19) * TAU, 2.4 + hr(f + 29) * .55, .28, H, 1, hr(f + 39), hr(f + 49), .3);
     if (!young && H > 6.5) for (let k = 3 + (rnd() * 3 | 0); k > 0; k--) { const a = rnd() * TAU; solid(dId, cx + cos(a) * .55, cy - .75 - rnd() * .3, cz + sin(a) * .55, rr(.2, .27), yawQ(rnd() * TAU), 13, rnd(), 80, H); }
   };
   rseed(1);
