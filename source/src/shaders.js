@@ -485,7 +485,7 @@ fn marble(p: vec2f, fw: f32, vein: f32) -> vec4f {
   let sl = p / 1.2; let jd = abs(fract(sl) - .5) * 1.2;
   let joint = max(cov(.6 - jd.x, .0025, fw), cov(.6 - jd.y, .0025, fw));
   let id = floor(sl); let hh = h2(id);
-  var col = mix(vec3f(.83, .80, .745), vec3f(.81, .755, .67), step(.82, hh) * .6) * (.96 + .08 * hh);
+  var col = mix(vec3f(.76, .735, .69), vec3f(.74, .69, .615), step(.82, hh) * .6) * (.96 + .08 * hh);
   col = mix(col, vec3f(.62, .61, .60), vein * .22 * (1. - border));
   col = mix(col, vec3f(.73, .66, .56), sat(-star / max(fw, 1e-3) + .5) * sat((star + .55) / max(fw, 1e-3) + .5) * .85);
   col = mix(col, vec3f(.70, .62, .52), dia * .8);
@@ -545,7 +545,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
     // plain stone facades (7) with arcades painted on, and city buildings (17) with windows by floor
     let hh = hs(sd * 3.7);
     let ct = select(select(select(select(vec3f(.74, .66, .54), vec3f(.66, .57, .46), hh > .3), vec3f(.76, .74, .70), hh > .55), vec3f(.66, .54, .42), hh > .75), vec3f(.58, .56, .53), hh > .9);
-    alb = select(vec3f(.80, .75, .66), ct, mat == 17) * (.86 + .2 * B.h) * (.94 + .1 * C.c);
+    alb = select(vec3f(.72, .675, .595), ct, mat == 17) * (.86 + .2 * B.h) * (.94 + .1 * C.c);
     if (mat == 17) {
       let bw = mix(2.6, 4.6, hs(sd * 11.)); let ww = mix(.18, .34, hs(sd * 13.));
       let wx = fract(fu / bw); let wy = fract(fv / 3.3); let flr = floor(fv / 3.3); let bay = floor(fu / bw);
@@ -564,17 +564,18 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
       alb = mix(alb, alb * vec3f(.9, .84, .74), band * .6);
       let seam = 1. - ss(.0, .04, abs(fract(i.op.x / 12.) - .5) * 2. - .9) * ss(.0, .04, abs(fract(i.op.z / 12.) - .5) * 2. - .9);
       let chk = f32((i32(floor(i.op.x / 12.)) + i32(floor(i.op.z / 12.))) & 1);
-      alb = mix(alb, vec3f(.80, .77, .71) * (1. - .25 * seam) * (.88 + .2 * B.c) * (1. - .06 * chk), ss(.6, .9, on.y));
+      alb = mix(alb, vec3f(.70, .67, .62) * (1. - .25 * seam) * (.88 + .2 * B.c) * (1. - .06 * chk), ss(.6, .9, on.y));
     }
     bump = .05;
   } else if (mat == 25 || mat == 20) {
     // carved pale stone: ashlar courses, and black-and-white voussoirs round every arch
-    alb = select(vec3f(.76, .70, .60), vec3f(.80, .75, .66), mat == 20) * (.9 + .12 * B.h) * (.95 + .08 * C.c);
+    // dressed stone is never one flat white: broad weather stains and block-to-block tone give the eye edges in full sun
+    alb = select(vec3f(.70, .645, .555), vec3f(.72, .675, .595), mat == 20) * (.86 + .2 * B.h) * (.92 + .14 * C.c) * mix(1., .86, ss(.5, .82, A.c));
     let cj = max(cov(abs(fract(fv / .62) - .5) * .62 - .3, .006, fw3), cov(abs(fract(fu / 1.24 + floor(fv / .62) * .5) - .5) * 1.24 - .61, .006, fw3)) * wall;
     alb *= 1. - .3 * cj;
     if (mat == 25 && on.y < -.7 && i.wp.x > 80.) {
       let bm = cov(abs(fract(i.wp.z / 2.5) - .5) * 2.5, .14, fw3);
-      alb = mix(vec3f(.86, .80, .70), vec3f(.66, .56, .44), bm);
+      alb = mix(vec3f(.76, .71, .62), vec3f(.62, .53, .42), bm);
     }
     if (mat == 25 && abs(on.x) > .7) {
       var hw = 2.; var ys = 6.2; var R = 3.2; var bu = fract((i.wp.z - MZ0) / 6.) * 6. - 3.; var on_ = step(fv, 10.6);
@@ -587,7 +588,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
       let bwid = .16 * R + .2;
       let vb = cov(ad.x - bwid * .5, bwid * .5, fw3) * on_;
       let odd = fract(ad.y * .5) > .25;
-      alb = mix(alb, select(vec3f(.86, .83, .76), vec3f(.13, .12, .12), odd), vb);
+      alb = mix(alb, select(vec3f(.76, .735, .67), vec3f(.13, .12, .12), odd), vb);
       alb = mix(alb, alb * .82, cov(ad.x - bwid - .05, .05, fw3) * on_);
     }
     if (mat == 20) {
@@ -634,7 +635,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   } else if (mat == 10) {
     alb = vec3f(1., .72, .30); gloss = .9; metal = 1.; bump = 0.;
   } else if (mat == 11) {
-    alb = vec3f(.74, .74, .72) * (.92 + .1 * B.h); gloss = .2; bump = .1;
+    alb = vec3f(.66, .66, .64) * (.92 + .1 * B.h); gloss = .2; bump = .1;
   } else if (mat == 12) {
     // date palm trunk: spiral of cut leaf bases makes a diamond crosshatch
     let ang = atan2(i.op.z - sd * 37., i.op.x - sd * 37.) / TAU;
@@ -668,14 +669,14 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   } else if (mat == 23) {
     alb = vec3f(.50, .38, .19) * (.9 + .2 * B.h); metal = .75; gloss = .6; bump = .1;
   } else if (mat == 24) {
-    alb = vec3f(.86, .86, .84) * (.96 + .05 * B.h); gloss = .35; bump = .02;
+    alb = vec3f(.74, .74, .72) * (.96 + .05 * B.h); gloss = .35; bump = .02;
   } else if (mat == 27) {
     alb = mix(vec3f(.46, .45, .45), vec3f(.60, .59, .57), ss(.4, .7, C.c)) * (.88 + .24 * hs(floor(C.h * 9.))); gloss = .55; bump = .15;
   }
   // night: the Masjid is floodlit, its domes and finials glow, the umbrella fabric is lit from inside
   if (NIGHT > .5) {
     var k = 0.;
-    if (mat == 25 || mat == 20 || mat == 7) { k = .3; } else if (mat == 8 || mat == 10) { k = 1.5; } else if (mat == 9) { k = .35; } else if (mat == 11) { k = .5; } else if (mat == 19) { k = .05; }
+    if (mat == 25 || mat == 20 || mat == 7) { k = mix(.12, .04, ss(0., 14., i.wp.y)); } else if (mat == 8 || mat == 10) { k = 1.5; } else if (mat == 9) { k = .35; } else if (mat == 11) { k = .3; } else if (mat == 19) { k = .03; }
     emi += alb * k;
   }
   let N = normalize(qrot(i.q, normalize(on + (A.n * .8 + B.n * .6 + C.n * .4 * ss(70., 10., dist)) * bump)));
@@ -687,7 +688,7 @@ fn floorRefl(p: vec3f, R: vec3f) -> vec3f {
   let ndl = sat(dot(N, L));
   let uc = uCell(i.wp.xz);
   let under = uOpen(g.mis.w, uDelay(uc.zw)) * (1. - ss(11., 14., max(abs(uc.x), abs(uc.y)))) * ss(15.5, 12., i.wp.y) * f32(!far);
-  let am = (amb(N, so) + (AMBC * vec3f(.95, .86, .74) * .42 + vec3f(1., .78, .5) * .5 * NIGHT) * under * sat(N.y * .5 + .6)) * ao;
+  let am = (amb(N, so) + (AMBC * vec3f(.95, .86, .74) * .42 + vec3f(1., .78, .5) * .3 * NIGHT) * under * sat(N.y * .5 + .6)) * ao;
   var c = alb * (E * ndl + am) + emi;
   let Hh = normalize(V + L);
   let spc = mix(vec3f(.04), alb, metal);
@@ -755,8 +756,9 @@ fn mem(a: f32, s: f32, e: f32, sd: f32) -> vec3f {
   let ndl = abs(dot(ng, L));
   let lit = select(.55, 1., select(-1., 1., top) == sunSide);
   let so = skyOcc(i.wp + n * 1.5);
-  var alb = vec3f(.90, .89, .86) * (1. - .2 * seam) * (.97 + .06 * h2(vec2f(floor(a / TAU * 32.), i.k.y * 91.)));
-  let bounce = vec3f(.98, .86, .70) * .72 * sat(-n.y) * mix(.6, 1., e);
+  var alb = vec3f(.78, .77, .745) * (1. - .2 * seam) * (.97 + .06 * h2(vec2f(floor(a / TAU * 32.), i.k.y * 91.)));
+  // light bounced up from the marble: it follows the sun and sky, so at night only the floodlit floor feeds it
+  let bounce = vec3f(.98, .86, .70) * .5 * mix(1., .3, NIGHT) * sat(-n.y) * mix(.6, 1., e);
   var c = alb * (Es * ndl * lit + amb(n, so) + bounce);
   c += Es * pow(sat(dot(n, normalize(V + L))), 40.) * .08 * f32(top);
   c = mix(c, vec3f(.55, .55, .56) * (amb(n, so) + bounce * .6), arm);
