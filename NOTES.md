@@ -30,9 +30,27 @@ Built with the `worldsmith` skill (`~/.shared/skills/worldsmith`), starting from
   - 4 a030a57 fix loop 1: visible sky dome x1.6 dawn / x1.3 golden (LUT still drives ambient + aerial), night
     expo 1.8 -> 1.4. Hero crop: flatwhite 2.50, brightdetail 25.68 (+66% vs live), clip .09 (max .37). Gate sweep
     on it (verify/s1-g2-*): GPU 4.60 / 9.46 ms, 0 errors at 3 times x 3 levels, menu ok, 112.5 kB.
-  - PAUSED 2026-11-18 ~17:00 AEDT at 82% of the 5-hour window; one-shot resume armed for 20:07 AEDT.
-    Next: fix loop 2 (pose-3 sun glint smear on the marble; night lamp pools + warm floodlight gradient on the
-    facade), critic round 2, ship stage 1 if the ship rule allows (fix-loop cap 4), then stage 2.
+  - Paused 2026-11-18 ~17:00 AEDT at 82% of the 5-hour window, resumed ~20:00 after the reset.
+  - 5 0f07ff1 fix loop 2: night point lights (the plaza lamp posts as warm pools, ground floodlights every 12 m
+    scalloping the facade), the night floor mirror no longer reflects a daylit canopy/facade, PTFE transmission
+    .55 -> .3 (real membrane passes ~10-15%), canopy bounce .5 -> .4, dawn sun x.74 and golden x.85 (sunlit
+    stone no longer clips to flat white). Hero crop (verify/s1-6): flatwhite max 1.51 (dawn .69, golden .25,
+    night .30 mean), clip max .35, brightdetail 32.6 vs live 15.4 (+111%). Gates (verify/s1-g3-*): GPU 4.42 avg /
+    8.15 p99 ms, 0 errors at 3 times x 3 levels, menu ok, 113.6 kB.
+  - Critic round 2 (on 0f07ff1; highest major): glare smear FIXED; night PARTLY (facade floodlights and lamp
+    pools now read, canopy still day-grey); dawn zenith PARTLY (clean but deep navy). Strengths: night facade
+    uplighting (best frame), lamp pools, low-sun grazing light on the inlay and arcade.
+  - 6 8776fa8 fix loop 3: night canopy bounce x.12 and under-canopy fill .06 (pools read against a darker
+    plaza), dawn visible sky x2.6. Hero crop (verify/s1-7b-t0 + s1-7-t1/t2): flatwhite max 1.53, clip max .46,
+    brightdetail 35.2 (+128%).
+  - Critic round 3 (on 8776fa8): highest severity MINOR (in-scope and overall). Dawn sky FIXED; night PARTLY
+    (now minor: floor/arcade whites carry a stop too much fill). Remaining minors for stage 2: night aerial flat,
+    Green Dome emission too uniform, golden pose-5 facade dull in shade, canopy flat at dawn/golden (seam bands
+    without cloth shading), floor radial streaks near the sun, aliasing on thin arch rows.
+  - Gates on 8776fa8 (verify/s1-g4-*): ALL PASS. clip max .46 < .5; flatwhite max 1.53 < 2; brightdetail 35.2 vs
+    15.4 (+128%, gate +15%); critic minor; GPU 4.41 avg / 8.17 p99 ms (gate 11 / 16); 0 console errors at
+    3 times x 3 levels; menu-preview ok; index.html 113.6 kB.
+  - SHIPPED stage 1: a7e3dd2 build, a71d2f5 README screenshots, pushed realism-s1:main.
   - Critic: one per stage, not one per feature (5-hour usage window was at 71% with six sessions sharing it).
 
 - Phase: 7 (delivered). Critic loop stopped by the brief's rule: 6 critic iterations (iter-02 .. iter-07), highest
