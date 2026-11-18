@@ -19,5 +19,5 @@ try { const t = localStorage.nabawiTime; if (t === '0' || t === '1' || t === '2'
 const TP = [
   { sun: [.97, .16, .18], sunc: [2.3, 1.6, 1.1], zen: [.07, .21, .60], cool: [.68, .72, .82], warm: [1.40, .90, .50], band: [1, .5, .2], rose: [.30, .10, .12], gnd: 1, farblue: [.64, .68, .78], ambc: [1, 1, 1], cloud: 1, expo: .5, rays: 1, lights: 1, litf: .9, night: 0, birds: 1 },
   { sun: [-.95, .17, .25], sunc: [3.1, 2.15, 1.3], zen: [.10, .24, .58], cool: [.74, .68, .66], warm: [1.35, .84, .44], band: [1, .5, .2], rose: [.16, .07, .07], gnd: 1, farblue: [.62, .64, .72], ambc: [1.04, .96, .86], cloud: 1, expo: .5, rays: 1, lights: 1.2, litf: .84, night: 0, birds: .8 },
-  { sun: [.45, .62, .64], sunc: [.17, .2, .29], zen: [.004, .008, .022], cool: [.025, .03, .045], warm: [.06, .05, .055], band: [.32, .17, .07], rose: [0, 0, 0], gnd: .06, farblue: [.03, .035, .05], ambc: [.045, .05, .07], cloud: .03, expo: 1.8, rays: 0, lights: 4, litf: .35, night: 1, birds: .15 },
+  { sun: [.45, .62, .64], sunc: [.17, .2, .29], zen: [.004, .008, .022], cool: [.025, .03, .045], warm: [.06, .05, .055], band: [.32, .17, .07], rose: [0, 0, 0], gnd: .06, farblue: [.03, .035, .05], ambc: [.045, .05, .07], cloud: .03, expo: 1.4, rays: 0, lights: 4, litf: .35, night: 1, birds: .15 },
 ][TOD];

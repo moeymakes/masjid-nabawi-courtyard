@@ -900,7 +900,9 @@ struct VO { @builtin(position) cp: vec4f, @location(0) d: vec3f };
 }
 @fragment fn fs(i: VO) -> @location(0) vec4f {
   let rd = normalize(i.d); let L = g.sun.xyz; let mu = dot(rd, L);
-  var c = skyCol(rd, L);
+  // the visible dome is lifted a little over the physical radiance at dawn and golden hour, as a photograph exposed for
+  // the sunlit stone would show it; the LUT's own value still drives ambient and aerial perspective
+  var c = skyCol(rd, L) * ${[1.6, 1.3, 1][TOD]};
   // high thin cloud: streaks of cirrus on a plane 6 km up, lit gold toward the sun and rose away from it
   if (rd.y > .004) {
     let q = rd.xz / rd.y * 6000.;
